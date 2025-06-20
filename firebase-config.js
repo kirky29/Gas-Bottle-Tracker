@@ -7,16 +7,26 @@ const firebaseConfig = {
   apiKey: "AIzaSyAxRlW4V42cwORS2XBk_3bsdFcUPoFpo3k",
   authDomain: "gas-bottle-tracker.firebaseapp.com",
   projectId: "gas-bottle-tracker",
-  storageBucket: "gas-bottle-tracker.firebasestorage.app",
+  storageBucket: "gas-bottle-tracker.appspot.com",
   messagingSenderId: "973155190596",
   appId: "1:973155190596:web:2580f0c74a630001f0b911"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase with error handling
+let app, db;
 
-// Initialize Firestore
-const db = getFirestore(app);
+try {
+  console.log('Initializing Firebase app...');
+  app = initializeApp(firebaseConfig);
+  console.log('Firebase app initialized successfully');
+  
+  console.log('Initializing Firestore...');
+  db = getFirestore(app);
+  console.log('Firestore initialized successfully');
+} catch (error) {
+  console.error('Firebase initialization error:', error);
+  throw error;
+}
 
 // Export Firebase services
 export { db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy }; 

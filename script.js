@@ -639,13 +639,34 @@ class GasBottleTracker {
             this.logDebug('Initializing Firebase...', 'info');
             this.updateSyncStatus('connecting');
             
-            this.logDebug(`User ID: ${this.userId}`, 'info');
-            this.logDebug('Setting up Firestore real-time listener...', 'info');
+            // Add timeout to prevent hanging
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Firebase initialization timeout')), 10000);
+            });
             
-            // Set up real-time listener for data changes
-            const userDocRef = doc(db, 'users', this.userId);
-            this.logDebug(`Document reference: users/${this.userId}`, 'info');
+            const initPromise = this.performFirebaseInit();
             
+            await Promise.race([initPromise, timeoutPromise]);
+            
+        } catch (error) {
+            this.logDebug(`Firebase initialization error: ${error.message}`, 'error');
+            this.logDebug(`Error code: ${error.code}`, 'error');
+            console.error('Firebase initialization error:', error);
+            this.updateSyncStatus('error');
+            // Fallback to local storage
+            this.loadData();
+        }
+    }
+
+    async performFirebaseInit() {
+        this.logDebug(`User ID: ${this.userId}`, 'info');
+        this.logDebug('Setting up Firestore real-time listener...', 'info');
+        
+        // Set up real-time listener for data changes
+        const userDocRef = doc(db, 'users', this.userId);
+        this.logDebug(`Document reference: users/${this.userId}`, 'info');
+        
+        return new Promise((resolve, reject) => {
             this.unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
                 this.logDebug('Firestore snapshot received', 'info');
                 
@@ -662,25 +683,15 @@ class GasBottleTracker {
                     // First time user, create document
                     this.saveDataToFirebase();
                 }
+                resolve();
             }, (error) => {
                 this.logDebug(`Firestore listener error: ${error.message}`, 'error');
                 this.logDebug(`Error code: ${error.code}`, 'error');
                 console.error('Firebase sync error:', error);
                 this.updateSyncStatus('error');
-                // Fallback to local storage
-                this.loadData();
+                reject(error);
             });
-
-            this.logDebug('Firebase initialization completed', 'success');
-
-        } catch (error) {
-            this.logDebug(`Firebase initialization error: ${error.message}`, 'error');
-            this.logDebug(`Error code: ${error.code}`, 'error');
-            console.error('Firebase initialization error:', error);
-            this.updateSyncStatus('error');
-            // Fallback to local storage
-            this.loadData();
-        }
+        });
     }
 
     updateSyncStatus(status) {
@@ -784,34 +795,84 @@ class GasBottleTracker {
     }
 
     async testFirebaseConnection() {
-        this.logDebug('Testing Firebase connection...', 'info');
+        this.logDebug('=== FIREBASE CONNECTION TEST ===', 'info');
         
         try {
+            // Test 1: Basic Firebase app initialization
+            this.logDebug('Test 1: Checking Firebase app...', 'info');
+            if (!db) {
+                throw new Error('Firebase database not initialized');
+            }
+            this.logDebug('✅ Firebase app is initialized', 'success');
+            
+            // Test 2: Basic Firestore operations
+            this.logDebug('Test 2: Testing basic Firestore operations...', 'info');
             const userDocRef = doc(db, 'users', this.userId);
+            this.logDebug(`Document path: users/${this.userId}`, 'info');
+            
+            // Test 3: Write operation
+            this.logDebug('Test 3: Testing write operation...', 'info');
             const testData = {
                 test: true,
                 timestamp: new Date().toISOString(),
-                message: 'Firebase connection test'
+                message: 'Firebase connection test',
+                userId: this.userId
             };
             
-            this.logDebug(`Attempting to write test data to user: ${this.userId}`, 'info');
             await setDoc(userDocRef, testData);
-            this.logDebug('✅ Firebase write test successful!', 'success');
+            this.logDebug('✅ Write operation successful!', 'success');
             
-            this.logDebug('Attempting to read test data...', 'info');
+            // Test 4: Read operation
+            this.logDebug('Test 4: Testing read operation...', 'info');
             const docSnap = await getDoc(userDocRef);
             if (docSnap.exists()) {
-                this.logDebug('✅ Firebase read test successful!', 'success');
-                this.logDebug(`Data: ${JSON.stringify(docSnap.data())}`, 'info');
+                const data = docSnap.data();
+                this.logDebug('✅ Read operation successful!', 'success');
+                this.logDebug(`Retrieved data: ${JSON.stringify(data)}`, 'info');
             } else {
-                this.logDebug('❌ Firebase read test failed - document not found', 'error');
+                this.logDebug('❌ Read operation failed - document not found', 'error');
             }
+            
+            // Test 5: Real-time listener
+            this.logDebug('Test 5: Testing real-time listener...', 'info');
+            await this.testRealtimeListener();
+            
+            this.logDebug('=== ALL TESTS COMPLETED ===', 'success');
             
         } catch (error) {
             this.logDebug(`❌ Firebase test failed: ${error.message}`, 'error');
             this.logDebug(`Error code: ${error.code}`, 'error');
-            this.logDebug(`Error details: ${JSON.stringify(error)}`, 'error');
+            this.logDebug(`Error stack: ${error.stack}`, 'error');
+            
+            // Check for specific error types
+            if (error.code === 'permission-denied') {
+                this.logDebug('🔒 This appears to be a permissions issue. Check Firestore rules.', 'warning');
+            } else if (error.code === 'unavailable') {
+                this.logDebug('🌐 This appears to be a network/Firebase service issue.', 'warning');
+            } else if (error.code === 'not-found') {
+                this.logDebug('📁 This appears to be a document path issue.', 'warning');
+            }
         }
+    }
+
+    async testRealtimeListener() {
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Real-time listener timeout'));
+            }, 5000);
+            
+            const userDocRef = doc(db, 'users', this.userId);
+            const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
+                clearTimeout(timeout);
+                this.logDebug('✅ Real-time listener working!', 'success');
+                unsubscribe();
+                resolve();
+            }, (error) => {
+                clearTimeout(timeout);
+                this.logDebug(`❌ Real-time listener error: ${error.message}`, 'error');
+                reject(error);
+            });
+        });
     }
 }
 
