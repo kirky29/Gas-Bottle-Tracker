@@ -2,12 +2,15 @@
 
 A simple, mobile-first web application to track your gas bottle spending and usage.
 
+*Latest update: Added cost per day calculations and daily spending analysis*
+
 ## Features
 
 - **Mobile-First Design**: Fully responsive interface optimized for smartphones
 - **Track Connections**: Record when you connect a gas bottle and the cost
 - **Flexible Pricing**: Update bottle weight and price as needed
 - **Statistics**: View total connections, spending, average costs, and gas usage
+- **Daily Analysis**: Calculate cost per day and time between bottles
 - **Data Persistence**: All data is saved locally in your browser
 - **Clean Interface**: Modern, intuitive design with smooth animations
 
