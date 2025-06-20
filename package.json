@@ -5,7 +5,15 @@
   "main": "index.html",
   "scripts": {
     "start": "npx serve .",
-    "dev": "npx serve ."
+    "dev": "npx serve .",
+    "build": "npm install",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "firebase": "^10.7.1"
+  },
+  "devDependencies": {
+    "vite": "^5.0.8"
   },
   "repository": {
     "type": "git",
@@ -17,7 +25,9 @@
     "tracker",
     "expense",
     "mobile",
-    "pwa"
+    "pwa",
+    "firebase",
+    "firestore"
   ],
   "author": "Kirk",
   "license": "MIT",

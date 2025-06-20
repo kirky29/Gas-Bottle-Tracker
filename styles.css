@@ -39,6 +39,43 @@ body {
     font-weight: 300;
 }
 
+.sync-status {
+    margin-top: 16px;
+}
+
+.sync-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    font-size: 0.9rem;
+    color: white;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.sync-indicator.connected {
+    background: rgba(72, 187, 120, 0.2);
+    border-color: rgba(72, 187, 120, 0.3);
+}
+
+.sync-indicator.connecting {
+    background: rgba(237, 137, 54, 0.2);
+    border-color: rgba(237, 137, 54, 0.3);
+}
+
+.sync-indicator.error {
+    background: rgba(245, 101, 101, 0.2);
+    border-color: rgba(245, 101, 101, 0.3);
+}
+
+.sync-indicator i {
+    font-size: 0.8rem;
+}
+
 /* Cards */
 .settings-card,
 .add-connection-card,

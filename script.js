@@ -1,4 +1,6 @@
-// Gas Bottle Tracker App
+// Gas Bottle Tracker App with Firebase Sync
+import { db, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy } from './firebase-config.js';
+
 class GasBottleTracker {
     constructor() {
         this.connections = [];
@@ -6,15 +8,25 @@ class GasBottleTracker {
             bottleWeight: 47,
             bottlePrice: 83.50
         };
+        this.syncStatus = 'connecting'; // connecting, connected, error
+        this.userId = this.generateUserId();
+        this.unsubscribe = null;
         
         this.init();
     }
 
     init() {
-        this.loadData();
-        this.setupEventListeners();
-        this.setDefaultDate();
-        this.updateDisplay();
+        this.initFirebase().then(() => {
+            this.setupEventListeners();
+            this.setDefaultDate();
+            this.updateDisplay();
+        }).catch(() => {
+            // Fallback to local storage if Firebase fails
+            this.loadData();
+            this.setupEventListeners();
+            this.setDefaultDate();
+            this.updateDisplay();
+        });
     }
 
     setupEventListeners() {
@@ -72,8 +84,7 @@ class GasBottleTracker {
 
         this.settings.bottleWeight = bottleWeight;
         this.settings.bottlePrice = bottlePrice;
-        this.saveData();
-        this.updateDisplay();
+        this.saveDataToFirebase();
         this.showMessage('Settings updated successfully!', 'success');
     }
 
@@ -96,26 +107,22 @@ class GasBottleTracker {
         this.connections.push(connection);
         this.connections.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
         
-        this.saveData();
-        this.updateDisplay();
+        // Save to Firebase (which will trigger the real-time update)
+        this.saveDataToFirebase();
         this.resetForm();
         this.showMessage('Connection added successfully!', 'success');
     }
 
     deleteConnection(id) {
         if (confirm('Are you sure you want to delete this connection?')) {
-            this.connections = this.connections.filter(conn => conn.id !== id);
-            this.saveData();
-            this.updateDisplay();
-            this.showMessage('Connection deleted successfully!', 'success');
+            this.deleteConnectionFromFirebase(id);
         }
     }
 
     clearHistory() {
         if (confirm('Are you sure you want to clear all connection history? This action cannot be undone.')) {
             this.connections = [];
-            this.saveData();
-            this.updateDisplay();
+            this.saveDataToFirebase();
             this.showMessage('History cleared successfully!', 'success');
         }
     }
@@ -607,12 +614,127 @@ class GasBottleTracker {
         };
         reader.readAsText(file);
     }
+
+    generateUserId() {
+        // Generate a unique user ID based on device/browser
+        let userId = localStorage.getItem('gasBottleUserId');
+        if (!userId) {
+            userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('gasBottleUserId', userId);
+        }
+        return userId;
+    }
+
+    async initFirebase() {
+        try {
+            this.updateSyncStatus('connecting');
+            
+            // Set up real-time listener for data changes
+            const userDocRef = doc(db, 'users', this.userId);
+            
+            this.unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    this.connections = data.connections || [];
+                    this.settings = data.settings || this.settings;
+                    this.updateDisplay();
+                    this.updateSyncStatus('connected');
+                } else {
+                    // First time user, create document
+                    this.saveDataToFirebase();
+                }
+            }, (error) => {
+                console.error('Firebase sync error:', error);
+                this.updateSyncStatus('error');
+                // Fallback to local storage
+                this.loadData();
+            });
+
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+            this.updateSyncStatus('error');
+            // Fallback to local storage
+            this.loadData();
+        }
+    }
+
+    updateSyncStatus(status) {
+        this.syncStatus = status;
+        const indicator = document.getElementById('syncIndicator');
+        const syncText = document.getElementById('syncText');
+        
+        if (indicator && syncText) {
+            indicator.className = `sync-indicator ${status}`;
+            
+            switch (status) {
+                case 'connected':
+                    syncText.textContent = 'Synced';
+                    indicator.innerHTML = '<i class="fas fa-cloud"></i><span>Synced</span>';
+                    break;
+                case 'connecting':
+                    syncText.textContent = 'Connecting...';
+                    indicator.innerHTML = '<i class="fas fa-cloud"></i><span>Connecting...</span>';
+                    break;
+                case 'error':
+                    syncText.textContent = 'Offline';
+                    indicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Offline</span>';
+                    break;
+            }
+        }
+    }
+
+    async saveDataToFirebase() {
+        try {
+            const userDocRef = doc(db, 'users', this.userId);
+            await setDoc(userDocRef, {
+                connections: this.connections,
+                settings: this.settings,
+                lastUpdated: new Date().toISOString()
+            });
+            this.updateSyncStatus('connected');
+        } catch (error) {
+            console.error('Error saving to Firebase:', error);
+            this.updateSyncStatus('error');
+            // Fallback to local storage
+            this.saveData();
+        }
+    }
+
+    async deleteConnectionFromFirebase(connectionId) {
+        try {
+            // Remove from local array first
+            this.connections = this.connections.filter(conn => conn.id !== connectionId);
+            
+            // Update Firebase
+            await this.saveDataToFirebase();
+            
+            this.updateDisplay();
+            this.showMessage('Connection deleted successfully!', 'success');
+        } catch (error) {
+            console.error('Error deleting from Firebase:', error);
+            this.updateSyncStatus('error');
+            this.showMessage('Error deleting connection. Please try again.', 'error');
+        }
+    }
+
+    cleanup() {
+        if (this.unsubscribe) {
+            this.unsubscribe();
+        }
+    }
 }
 
 // Initialize the app when the page loads
 let app;
 document.addEventListener('DOMContentLoaded', () => {
     app = new GasBottleTracker();
+});
+
+// Cleanup when page is unloaded
+window.addEventListener('beforeunload', () => {
+    if (app) {
+        app.cleanup();
+    }
 });
 
 // Add keyboard shortcuts
