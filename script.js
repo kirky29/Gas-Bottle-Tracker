@@ -64,6 +64,10 @@ class GasBottleTracker {
             this.testFirebaseConnection();
         });
 
+        document.getElementById('manualSync').addEventListener('click', () => {
+            this.manualSync();
+        });
+
         // Set default report dates
         this.setDefaultReportDates();
     }
@@ -636,21 +640,30 @@ class GasBottleTracker {
 
     async initFirebase() {
         try {
-            this.logDebug('Initializing Firebase...', 'info');
+            this.logDebug('=== FIREBASE INITIALIZATION START ===', 'info');
             this.updateSyncStatus('connecting');
+            
+            // Check if Firebase modules are loaded
+            this.logDebug('Checking Firebase modules...', 'info');
+            if (typeof db === 'undefined') {
+                throw new Error('Firebase database not loaded - check imports');
+            }
+            this.logDebug('✅ Firebase modules loaded successfully', 'success');
             
             // Add timeout to prevent hanging
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Firebase initialization timeout')), 10000);
+                setTimeout(() => reject(new Error('Firebase initialization timeout after 10 seconds')), 10000);
             });
             
             const initPromise = this.performFirebaseInit();
             
             await Promise.race([initPromise, timeoutPromise]);
+            this.logDebug('=== FIREBASE INITIALIZATION COMPLETE ===', 'success');
             
         } catch (error) {
-            this.logDebug(`Firebase initialization error: ${error.message}`, 'error');
-            this.logDebug(`Error code: ${error.code}`, 'error');
+            this.logDebug(`❌ Firebase initialization failed: ${error.message}`, 'error');
+            this.logDebug(`Error type: ${error.constructor.name}`, 'error');
+            this.logDebug(`Error stack: ${error.stack}`, 'error');
             console.error('Firebase initialization error:', error);
             this.updateSyncStatus('error');
             // Fallback to local storage
@@ -662,13 +675,28 @@ class GasBottleTracker {
         this.logDebug(`User ID: ${this.userId}`, 'info');
         this.logDebug('Setting up Firestore real-time listener...', 'info');
         
+        // Test basic Firebase connectivity first
+        this.logDebug('Testing basic Firebase connectivity...', 'info');
+        try {
+            const testDoc = doc(db, 'test', 'connection');
+            await setDoc(testDoc, { test: true, timestamp: new Date().toISOString() });
+            this.logDebug('✅ Basic Firebase write test successful', 'success');
+            await deleteDoc(testDoc);
+            this.logDebug('✅ Basic Firebase delete test successful', 'success');
+        } catch (error) {
+            this.logDebug(`❌ Basic Firebase test failed: ${error.message}`, 'error');
+            throw error;
+        }
+        
         // Set up real-time listener for data changes
         const userDocRef = doc(db, 'users', this.userId);
         this.logDebug(`Document reference: users/${this.userId}`, 'info');
         
         return new Promise((resolve, reject) => {
+            this.logDebug('Setting up onSnapshot listener...', 'info');
+            
             this.unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
-                this.logDebug('Firestore snapshot received', 'info');
+                this.logDebug('🎉 Firestore snapshot received!', 'success');
                 
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
@@ -685,12 +713,15 @@ class GasBottleTracker {
                 }
                 resolve();
             }, (error) => {
-                this.logDebug(`Firestore listener error: ${error.message}`, 'error');
+                this.logDebug(`❌ Firestore listener error: ${error.message}`, 'error');
                 this.logDebug(`Error code: ${error.code}`, 'error');
+                this.logDebug(`Error details: ${JSON.stringify(error)}`, 'error');
                 console.error('Firebase sync error:', error);
                 this.updateSyncStatus('error');
                 reject(error);
             });
+            
+            this.logDebug('onSnapshot listener set up successfully', 'info');
         });
     }
 
@@ -721,30 +752,59 @@ class GasBottleTracker {
 
     async saveDataToFirebase() {
         try {
-            this.logDebug('Saving data to Firebase...', 'info');
-            this.logDebug(`Connections: ${this.connections.length}`, 'info');
+            this.logDebug('=== SAVING DATA TO FIREBASE ===', 'info');
+            this.logDebug(`Connections count: ${this.connections.length}`, 'info');
             this.logDebug(`Settings: ${JSON.stringify(this.settings)}`, 'info');
             
+            // Validate data before saving
+            if (!Array.isArray(this.connections)) {
+                throw new Error('Connections is not an array');
+            }
+            
             const userDocRef = doc(db, 'users', this.userId);
+            this.logDebug(`Saving to document: users/${this.userId}`, 'info');
+            
             const dataToSave = {
                 connections: this.connections,
                 settings: this.settings,
-                lastUpdated: new Date().toISOString()
+                lastUpdated: new Date().toISOString(),
+                userId: this.userId,
+                version: '1.0'
             };
             
-            this.logDebug(`Saving to document: users/${this.userId}`, 'info');
+            this.logDebug(`Data to save: ${JSON.stringify(dataToSave)}`, 'info');
+            
+            // Perform the save operation
+            this.logDebug('Executing setDoc operation...', 'info');
             await setDoc(userDocRef, dataToSave);
             
-            this.logDebug('✅ Data saved to Firebase successfully!', 'success');
+            this.logDebug('✅ setDoc operation completed successfully!', 'success');
+            
+            // Verify the save by reading back
+            this.logDebug('Verifying save by reading document...', 'info');
+            const verifyDoc = await getDoc(userDocRef);
+            if (verifyDoc.exists()) {
+                const savedData = verifyDoc.data();
+                this.logDebug(`✅ Verification successful! Saved data: ${JSON.stringify(savedData)}`, 'success');
+            } else {
+                this.logDebug('❌ Verification failed - document not found after save', 'error');
+            }
+            
             this.updateSyncStatus('connected');
+            this.logDebug('=== FIREBASE SAVE COMPLETE ===', 'success');
+            
         } catch (error) {
             this.logDebug(`❌ Error saving to Firebase: ${error.message}`, 'error');
             this.logDebug(`Error code: ${error.code}`, 'error');
-            this.logDebug(`Error details: ${JSON.stringify(error)}`, 'error');
+            this.logDebug(`Error type: ${error.constructor.name}`, 'error');
+            this.logDebug(`Error stack: ${error.stack}`, 'error');
             console.error('Error saving to Firebase:', error);
             this.updateSyncStatus('error');
+            
             // Fallback to local storage
+            this.logDebug('Falling back to local storage...', 'warning');
             this.saveData();
+            throw error;
         }
     }
 
@@ -873,6 +933,19 @@ class GasBottleTracker {
                 reject(error);
             });
         });
+    }
+
+    async manualSync() {
+        this.logDebug('=== MANUAL SYNC STARTED ===', 'info');
+        this.logDebug(`Current connections: ${this.connections.length}`, 'info');
+        this.logDebug(`Current settings: ${JSON.stringify(this.settings)}`, 'info');
+        
+        try {
+            await this.saveDataToFirebase();
+            this.logDebug('✅ Manual sync completed successfully!', 'success');
+        } catch (error) {
+            this.logDebug(`❌ Manual sync failed: ${error.message}`, 'error');
+        }
     }
 }
 
