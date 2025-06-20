@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gas Bottle Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#667eea">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-fire"></i> Gas Bottle Tracker</h1>
+            <p class="subtitle">Track your gas spending</p>
+        </header>
+
+        <main class="main-content">
+            <!-- Current Settings -->
+            <section class="settings-card">
+                <h2><i class="fas fa-cog"></i> Current Settings</h2>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label for="bottleWeight">Bottle Weight (KG):</label>
+                        <input type="number" id="bottleWeight" value="47" min="1" step="0.1">
+                    </div>
+                    <div class="setting-item">
+                        <label for="bottlePrice">Bottle Price (£):</label>
+                        <input type="number" id="bottlePrice" value="83.50" min="0" step="0.01">
+                    </div>
+                </div>
+                <button id="updateSettings" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Update Settings
+                </button>
+            </section>
+
+            <!-- Add New Connection -->
+            <section class="add-connection-card">
+                <h2><i class="fas fa-plus"></i> Add New Connection</h2>
+                <form id="connectionForm" class="connection-form">
+                    <div class="form-group">
+                        <label for="connectionDate">Connection Date:</label>
+                        <input type="date" id="connectionDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="connectionCost">Cost (£):</label>
+                        <input type="number" id="connectionCost" min="0" step="0.01" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Add Connection
+                    </button>
+                </form>
+            </section>
+
+            <!-- Statistics -->
+            <section class="stats-card">
+                <h2><i class="fas fa-chart-bar"></i> Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalConnections">0</div>
+                        <div class="stat-label">Total Connections</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalSpent">£0.00</div>
+                        <div class="stat-label">Total Spent</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="avgCost">£0.00</div>
+                        <div class="stat-label">Average Cost</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalGas">0 KG</div>
+                        <div class="stat-label">Total Gas</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Connections History -->
+            <section class="history-card">
+                <h2><i class="fas fa-history"></i> Connection History</h2>
+                <div class="history-controls">
+                    <button id="clearHistory" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Clear History
+                    </button>
+                </div>
+                <div id="connectionsList" class="connections-list">
+                    <!-- Connections will be populated here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
