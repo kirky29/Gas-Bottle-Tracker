@@ -110,11 +110,61 @@ class GasBottleTracker {
         const avgCost = totalConnections > 0 ? totalSpent / totalConnections : 0;
         const totalGas = totalConnections * this.settings.bottleWeight;
 
+        // Calculate cost per day
+        const costPerDay = this.calculateCostPerDay();
+
         return {
             totalConnections,
             totalSpent,
             avgCost,
-            totalGas
+            totalGas,
+            costPerDay
+        };
+    }
+
+    calculateCostPerDay() {
+        if (this.connections.length < 2) {
+            return {
+                dailyRate: 0,
+                daysBetween: 0,
+                totalDays: 0,
+                averageDailyCost: 0
+            };
+        }
+
+        // Sort connections by date (oldest first for calculations)
+        const sortedConnections = [...this.connections].sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        const firstDate = new Date(sortedConnections[0].date);
+        const lastDate = new Date(sortedConnections[sortedConnections.length - 1].date);
+        
+        // Calculate total days between first and last connection
+        const totalDays = Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24));
+        
+        // Calculate total cost
+        const totalCost = sortedConnections.reduce((sum, conn) => sum + conn.cost, 0);
+        
+        // Calculate average daily cost over the entire period
+        const averageDailyCost = totalDays > 0 ? totalCost / totalDays : 0;
+
+        // Calculate average days between connections
+        let totalDaysBetween = 0;
+        for (let i = 1; i < sortedConnections.length; i++) {
+            const prevDate = new Date(sortedConnections[i - 1].date);
+            const currDate = new Date(sortedConnections[i].date);
+            const daysBetween = Math.ceil((currDate - prevDate) / (1000 * 60 * 60 * 24));
+            totalDaysBetween += daysBetween;
+        }
+        const avgDaysBetween = sortedConnections.length > 1 ? totalDaysBetween / (sortedConnections.length - 1) : 0;
+
+        // Calculate cost per day based on average days between bottles
+        const costPerDay = avgDaysBetween > 0 ? this.settings.bottlePrice / avgDaysBetween : 0;
+
+        return {
+            dailyRate: costPerDay,
+            daysBetween: avgDaysBetween,
+            totalDays: totalDays,
+            averageDailyCost: averageDailyCost
         };
     }
 
@@ -130,8 +180,27 @@ class GasBottleTracker {
         document.getElementById('avgCost').textContent = `£${stats.avgCost.toFixed(2)}`;
         document.getElementById('totalGas').textContent = `${stats.totalGas} KG`;
 
+        // Update cost per day statistics
+        this.updateCostPerDayDisplay(stats.costPerDay);
+
         // Update connections list
         this.updateConnectionsList();
+    }
+
+    updateCostPerDayDisplay(costPerDay) {
+        const costPerDayElement = document.getElementById('costPerDay');
+        const daysBetweenElement = document.getElementById('daysBetween');
+        const totalDaysElement = document.getElementById('totalDays');
+
+        if (costPerDay.dailyRate > 0) {
+            costPerDayElement.textContent = `£${costPerDay.dailyRate.toFixed(2)}`;
+            daysBetweenElement.textContent = `${costPerDay.daysBetween.toFixed(1)} days`;
+            totalDaysElement.textContent = `${costPerDay.totalDays} days`;
+        } else {
+            costPerDayElement.textContent = '£0.00';
+            daysBetweenElement.textContent = '0 days';
+            totalDaysElement.textContent = '0 days';
+        }
     }
 
     updateConnectionsList() {
@@ -148,15 +217,25 @@ class GasBottleTracker {
             return;
         }
 
-        connectionsList.innerHTML = this.connections.map(connection => {
+        connectionsList.innerHTML = this.connections.map((connection, index) => {
             const formattedDate = this.formatDate(connection.date);
             const formattedCost = `£${connection.cost.toFixed(2)}`;
+            
+            // Calculate days since this connection (if not the most recent)
+            let daysSince = '';
+            if (index > 0) {
+                const connectionDate = new Date(connection.date);
+                const nextConnectionDate = new Date(this.connections[index - 1].date);
+                const daysDiff = Math.ceil((nextConnectionDate - connectionDate) / (1000 * 60 * 60 * 24));
+                daysSince = `<div class="days-since">Lasted ${daysDiff} days</div>`;
+            }
             
             return `
                 <div class="connection-item" data-id="${connection.id}">
                     <div class="connection-info">
                         <div class="connection-date">${formattedDate}</div>
                         <div class="connection-cost">${formattedCost}</div>
+                        ${daysSince}
                     </div>
                     <div class="connection-actions">
                         <button class="btn btn-small btn-delete" onclick="app.deleteConnection(${connection.id})">
