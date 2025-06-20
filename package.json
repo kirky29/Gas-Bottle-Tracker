@@ -1,0 +1,29 @@
+{
+  "name": "gas-bottle-tracker",
+  "version": "1.0.0",
+  "description": "A simple, mobile-first web application to track your gas bottle spending and usage.",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "build": "echo 'Static site - no build required'",
+    "dev": "npx serve ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kirky29/Gas-Bottle-Tracker.git"
+  },
+  "keywords": [
+    "gas",
+    "bottle",
+    "tracker",
+    "expense",
+    "mobile",
+    "pwa"
+  ],
+  "author": "Kirk",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kirky29/Gas-Bottle-Tracker/issues"
+  },
+  "homepage": "https://github.com/kirky29/Gas-Bottle-Tracker#readme"
+}
