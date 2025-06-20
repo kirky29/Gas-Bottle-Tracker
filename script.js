@@ -33,11 +33,32 @@ class GasBottleTracker {
         document.getElementById('clearHistory').addEventListener('click', () => {
             this.clearHistory();
         });
+
+        // Report functionality
+        document.getElementById('generateReport').addEventListener('click', () => {
+            this.generateReport();
+        });
+
+        document.getElementById('exportReport').addEventListener('click', () => {
+            this.exportReport();
+        });
+
+        // Set default report dates
+        this.setDefaultReportDates();
     }
 
     setDefaultDate() {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('connectionDate').value = today;
+    }
+
+    setDefaultReportDates() {
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        
+        document.getElementById('reportStartDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+        document.getElementById('reportEndDate').value = today.toISOString().split('T')[0];
     }
 
     updateSettings() {
@@ -168,13 +189,89 @@ class GasBottleTracker {
         };
     }
 
+    calculateEnhancedStats() {
+        const stats = this.calculateStats();
+        
+        // Calculate recent cost per day (last 2 bottles)
+        const recentCostPerDay = this.calculateRecentCostPerDay();
+        
+        // Calculate overall cost per day (all bottles)
+        const overallCostPerDay = this.calculateOverallCostPerDay();
+        
+        // Calculate projected monthly cost
+        const projectedMonthly = recentCostPerDay > 0 ? recentCostPerDay * 30 : 0;
+        
+        return {
+            ...stats,
+            recentCostPerDay,
+            overallCostPerDay,
+            projectedMonthly
+        };
+    }
+
+    calculateRecentCostPerDay() {
+        if (this.connections.length < 2) {
+            return 0;
+        }
+
+        // Get the two most recent connections
+        const sortedConnections = [...this.connections].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const mostRecent = sortedConnections[0];
+        const secondMostRecent = sortedConnections[1];
+
+        const mostRecentDate = new Date(mostRecent.date);
+        const secondMostRecentDate = new Date(secondMostRecent.date);
+        
+        const daysBetween = Math.ceil((mostRecentDate - secondMostRecentDate) / (1000 * 60 * 60 * 24));
+        
+        if (daysBetween <= 0) {
+            return 0;
+        }
+
+        return this.settings.bottlePrice / daysBetween;
+    }
+
+    calculateOverallCostPerDay() {
+        if (this.connections.length < 2) {
+            return 0;
+        }
+
+        const sortedConnections = [...this.connections].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const firstDate = new Date(sortedConnections[0].date);
+        const lastDate = new Date(sortedConnections[sortedConnections.length - 1].date);
+        
+        const totalDays = Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24));
+        
+        if (totalDays <= 0) {
+            return 0;
+        }
+
+        const totalCost = sortedConnections.reduce((sum, conn) => sum + conn.cost, 0);
+        return totalCost / totalDays;
+    }
+
+    calculateRecentDaysBetween() {
+        if (this.connections.length < 2) {
+            return 0;
+        }
+
+        const sortedConnections = [...this.connections].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const mostRecent = sortedConnections[0];
+        const secondMostRecent = sortedConnections[1];
+
+        const mostRecentDate = new Date(mostRecent.date);
+        const secondMostRecentDate = new Date(secondMostRecent.date);
+        
+        return Math.ceil((mostRecentDate - secondMostRecentDate) / (1000 * 60 * 60 * 24));
+    }
+
     updateDisplay() {
         // Update settings inputs
         document.getElementById('bottleWeight').value = this.settings.bottleWeight;
         document.getElementById('bottlePrice').value = this.settings.bottlePrice;
 
         // Calculate and update statistics
-        const stats = this.calculateStats();
+        const stats = this.calculateEnhancedStats();
         document.getElementById('totalConnections').textContent = stats.totalConnections;
         document.getElementById('totalSpent').textContent = `£${stats.totalSpent.toFixed(2)}`;
         document.getElementById('avgCost').textContent = `£${stats.avgCost.toFixed(2)}`;
@@ -182,6 +279,9 @@ class GasBottleTracker {
 
         // Update cost per day statistics
         this.updateCostPerDayDisplay(stats.costPerDay);
+
+        // Update enhanced cost analysis
+        this.updateEnhancedCostAnalysis(stats);
 
         // Update connections list
         this.updateConnectionsList();
@@ -201,6 +301,167 @@ class GasBottleTracker {
             daysBetweenElement.textContent = '0 days';
             totalDaysElement.textContent = '0 days';
         }
+    }
+
+    updateEnhancedCostAnalysis(stats) {
+        const recentCostPerDayElement = document.getElementById('recentCostPerDay');
+        const overallCostPerDayElement = document.getElementById('overallCostPerDay');
+        const recentDaysBetweenElement = document.getElementById('recentDaysBetween');
+        const projectedMonthlyElement = document.getElementById('projectedMonthly');
+
+        recentCostPerDayElement.textContent = `£${stats.recentCostPerDay.toFixed(2)}`;
+        overallCostPerDayElement.textContent = `£${stats.overallCostPerDay.toFixed(2)}`;
+        recentDaysBetweenElement.textContent = `${this.calculateRecentDaysBetween()} days`;
+        projectedMonthlyElement.textContent = `£${stats.projectedMonthly.toFixed(2)}`;
+    }
+
+    generateReport() {
+        const startDate = document.getElementById('reportStartDate').value;
+        const endDate = document.getElementById('reportEndDate').value;
+
+        if (!startDate || !endDate) {
+            this.showMessage('Please select both start and end dates.', 'error');
+            return;
+        }
+
+        if (new Date(startDate) > new Date(endDate)) {
+            this.showMessage('Start date must be before end date.', 'error');
+            return;
+        }
+
+        // Filter connections within the date range
+        const filteredConnections = this.connections.filter(conn => {
+            const connDate = new Date(conn.date);
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            return connDate >= start && connDate <= end;
+        });
+
+        if (filteredConnections.length === 0) {
+            this.showMessage('No connections found in the selected date range.', 'error');
+            return;
+        }
+
+        // Calculate report statistics
+        const reportStats = this.calculateReportStats(filteredConnections, startDate, endDate);
+
+        // Display report results
+        this.displayReportResults(reportStats, filteredConnections);
+
+        // Show export button
+        document.getElementById('exportReport').style.display = 'inline-flex';
+    }
+
+    calculateReportStats(connections, startDate, endDate) {
+        const totalConnections = connections.length;
+        const totalSpent = connections.reduce((sum, conn) => sum + conn.cost, 0);
+        const avgCost = totalConnections > 0 ? totalSpent / totalConnections : 0;
+
+        // Calculate period length
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const periodDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+
+        // Calculate cost per day for the period
+        const costPerDay = periodDays > 0 ? totalSpent / periodDays : 0;
+
+        // Calculate projected annual cost based on this period's rate
+        const projectedAnnual = costPerDay * 365;
+
+        return {
+            totalConnections,
+            totalSpent,
+            avgCost,
+            costPerDay,
+            periodDays,
+            projectedAnnual
+        };
+    }
+
+    displayReportResults(stats, connections) {
+        // Update report statistics
+        document.getElementById('reportConnections').textContent = stats.totalConnections;
+        document.getElementById('reportTotalSpent').textContent = `£${stats.totalSpent.toFixed(2)}`;
+        document.getElementById('reportAvgCost').textContent = `£${stats.avgCost.toFixed(2)}`;
+        document.getElementById('reportCostPerDay').textContent = `£${stats.costPerDay.toFixed(2)}`;
+        document.getElementById('reportPeriod').textContent = `${stats.periodDays} days`;
+        document.getElementById('reportProjectedAnnual').textContent = `£${stats.projectedAnnual.toFixed(2)}`;
+
+        // Display connections in the report
+        this.displayReportConnections(connections);
+
+        // Show the results section
+        document.getElementById('reportResults').style.display = 'block';
+    }
+
+    displayReportConnections(connections) {
+        const reportConnectionsList = document.getElementById('reportConnectionsList');
+        
+        if (connections.length === 0) {
+            reportConnectionsList.innerHTML = '<p>No connections found in this period.</p>';
+            return;
+        }
+
+        // Sort connections by date (newest first)
+        const sortedConnections = [...connections].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        reportConnectionsList.innerHTML = sortedConnections.map(connection => {
+            const formattedDate = this.formatDate(connection.date);
+            const formattedCost = `£${connection.cost.toFixed(2)}`;
+            
+            return `
+                <div class="connection-item">
+                    <div class="connection-info">
+                        <div class="connection-date">${formattedDate}</div>
+                        <div class="connection-cost">${formattedCost}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    exportReport() {
+        const startDate = document.getElementById('reportStartDate').value;
+        const endDate = document.getElementById('reportEndDate').value;
+        
+        if (!startDate || !endDate) {
+            this.showMessage('Please generate a report first.', 'error');
+            return;
+        }
+
+        // Filter connections within the date range
+        const filteredConnections = this.connections.filter(conn => {
+            const connDate = new Date(conn.date);
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            return connDate >= start && connDate <= end;
+        });
+
+        const reportStats = this.calculateReportStats(filteredConnections, startDate, endDate);
+
+        const reportData = {
+            reportPeriod: {
+                startDate,
+                endDate,
+                periodDays: reportStats.periodDays
+            },
+            statistics: reportStats,
+            connections: filteredConnections,
+            settings: this.settings,
+            generatedAt: new Date().toISOString()
+        };
+
+        const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `gas-bottle-report-${startDate}-to-${endDate}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        this.showMessage('Report exported successfully!', 'success');
     }
 
     updateConnectionsList() {
@@ -310,7 +571,7 @@ class GasBottleTracker {
         const data = {
             connections: this.connections,
             settings: this.settings,
-            stats: this.calculateStats(),
+            stats: this.calculateEnhancedStats(),
             exportDate: new Date().toISOString()
         };
 

@@ -94,6 +94,92 @@
                             <div class="stat-label">Total Period</div>
                         </div>
                     </div>
+                    
+                    <!-- Enhanced cost analysis -->
+                    <div class="enhanced-cost-analysis">
+                        <h4><i class="fas fa-chart-line"></i> Detailed Cost Analysis</h4>
+                        <div class="cost-analysis-grid">
+                            <div class="stat-item">
+                                <div class="stat-value" id="recentCostPerDay">£0.00</div>
+                                <div class="stat-label">Recent Cost/Day</div>
+                                <div class="stat-note">Last 2 bottles</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="overallCostPerDay">£0.00</div>
+                                <div class="stat-label">Overall Cost/Day</div>
+                                <div class="stat-note">All bottles</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="recentDaysBetween">0 days</div>
+                                <div class="stat-label">Recent Days Between</div>
+                                <div class="stat-note">Last 2 bottles</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="projectedMonthly">£0.00</div>
+                                <div class="stat-label">Projected Monthly</div>
+                                <div class="stat-note">Based on recent rate</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Report Generator -->
+            <section class="report-card">
+                <h2><i class="fas fa-file-alt"></i> Custom Report</h2>
+                <div class="report-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="reportStartDate">Start Date:</label>
+                            <input type="date" id="reportStartDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportEndDate">End Date:</label>
+                            <input type="date" id="reportEndDate" required>
+                        </div>
+                    </div>
+                    <div class="report-actions">
+                        <button id="generateReport" class="btn btn-primary">
+                            <i class="fas fa-chart-bar"></i> Generate Report
+                        </button>
+                        <button id="exportReport" class="btn btn-success" style="display: none;">
+                            <i class="fas fa-download"></i> Export Report
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="reportResults" class="report-results" style="display: none;">
+                    <h3><i class="fas fa-chart-pie"></i> Report Results</h3>
+                    <div class="report-stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="reportConnections">0</div>
+                            <div class="stat-label">Connections</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="reportTotalSpent">£0.00</div>
+                            <div class="stat-label">Total Spent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="reportAvgCost">£0.00</div>
+                            <div class="stat-label">Average Cost</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="reportCostPerDay">£0.00</div>
+                            <div class="stat-label">Cost Per Day</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="reportPeriod">0 days</div>
+                            <div class="stat-label">Period Length</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="reportProjectedAnnual">£0.00</div>
+                            <div class="stat-label">Projected Annual</div>
+                        </div>
+                    </div>
+                    
+                    <div id="reportConnectionsList" class="report-connections-list">
+                        <!-- Report connections will be listed here -->
+                    </div>
                 </div>
             </section>
 
