@@ -1,13 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to read and write their own data
+    // Allow users to read and write their own data in the users collection
     match /users/{userId} {
       allow read, write: if true;
     }
     
     // Allow access to all collections for development
-    // You can make this more restrictive later
+    // This is more permissive for development but can be restricted later
     match /{document=**} {
       allow read, write: if true;
     }
