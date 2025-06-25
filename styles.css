@@ -90,7 +90,12 @@ body {
     border: 1px solid rgba(255,255,255,0.2);
 }
 
-.card h2 {
+.settings-card h2,
+.add-connection-card h2,
+.stats-card h2,
+.history-card h2,
+.report-card h2,
+.debug-card h2 {
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 20px;
