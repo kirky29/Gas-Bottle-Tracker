@@ -198,40 +198,21 @@ class GasBottleTracker {
 
         // Set default report dates
         this.setDefaultReportDates();
+
+        // Settings panel controls
+        document.getElementById('editSettings').addEventListener('click', () => {
+            this.showSettingsPanel();
+        });
+
+        document.getElementById('closeSettings').addEventListener('click', () => {
+            this.hideSettingsPanel();
+        });
     }
 
     updateSyncStatus(status) {
         this.syncStatus = status;
-        const indicator = document.getElementById('syncIndicator');
-        const text = document.getElementById('syncText');
-        
-        if (!indicator || !text) return;
-
-        // Remove all status classes
-        indicator.classList.remove('connected', 'connecting', 'error', 'local');
-        
-        switch (status) {
-            case 'connected':
-                indicator.classList.add('connected');
-                text.textContent = 'Firebase Connected';
-                indicator.querySelector('i').className = 'fas fa-cloud';
-                break;
-            case 'connecting':
-                indicator.classList.add('connecting');
-                text.textContent = 'Connecting...';
-                indicator.querySelector('i').className = 'fas fa-sync fa-spin';
-                break;
-            case 'error':
-                indicator.classList.add('error');
-                text.textContent = 'Local Storage';
-                indicator.querySelector('i').className = 'fas fa-save';
-                break;
-            case 'local':
-                indicator.classList.add('connected');
-                text.textContent = 'Local Storage';
-                indicator.querySelector('i').className = 'fas fa-save';
-                break;
-        }
+        // Sync status indicator removed from UI
+        // Status is now only logged to debug console
     }
 
     setDefaultDate() {
@@ -249,6 +230,19 @@ class GasBottleTracker {
         
         if (startDateEl) startDateEl.value = thirtyDaysAgo.toISOString().split('T')[0];
         if (endDateEl) endDateEl.value = today.toISOString().split('T')[0];
+    }
+
+    showSettingsPanel() {
+        document.getElementById('settingsPanel').style.display = 'block';
+    }
+
+    hideSettingsPanel() {
+        document.getElementById('settingsPanel').style.display = 'none';
+    }
+
+    updateSettingsPreview() {
+        document.getElementById('previewWeight').textContent = `${this.settings.bottleWeight} KG`;
+        document.getElementById('previewPrice').textContent = `£${this.settings.bottlePrice.toFixed(2)}`;
     }
 
     async updateSettings() {
@@ -290,21 +284,22 @@ class GasBottleTracker {
         
         this.showMessage('Settings updated successfully!', 'success');
         this.updateDisplay();
+        this.updateSettingsPreview();
+        this.hideSettingsPanel();
     }
 
     addConnection() {
         const date = document.getElementById('connectionDate').value;
-        const cost = parseFloat(document.getElementById('connectionCost').value);
 
-        if (!date || cost < 0) {
-            this.showMessage('Please enter valid connection details.', 'error');
+        if (!date) {
+            this.showMessage('Please select a connection date.', 'error');
             return;
         }
 
         const connection = {
             id: Date.now(),
             date: date,
-            cost: cost,
+            cost: this.settings.bottlePrice, // Use current bottle price
             timestamp: new Date().toISOString()
         };
 
@@ -322,7 +317,7 @@ class GasBottleTracker {
         }
         
         this.resetForm();
-        this.showMessage('Connection added successfully!', 'success');
+        this.showMessage('Bottle added successfully!', 'success');
         this.updateDisplay();
     }
 
@@ -520,6 +515,9 @@ class GasBottleTracker {
 
         // Update connections list
         this.updateConnectionsList();
+
+        // Update settings preview
+        this.updateSettingsPreview();
     }
 
     updateCostPerDayDisplay(costPerDay) {

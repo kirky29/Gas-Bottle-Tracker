@@ -16,18 +16,18 @@
         <header class="header">
             <h1><i class="fas fa-fire"></i> Gas Bottle Tracker</h1>
             <p class="subtitle">Track your gas spending</p>
-            <div class="sync-status">
-                <div id="syncIndicator" class="sync-indicator connecting">
-                    <i class="fas fa-sync fa-spin"></i>
-                    <span id="syncText">Connecting...</span>
-                </div>
-            </div>
+
         </header>
 
         <main class="main-content">
-            <!-- Current Settings -->
-            <section class="settings-card">
-                <h2><i class="fas fa-cog"></i> Current Settings</h2>
+            <!-- Settings Panel (initially hidden) -->
+            <section class="settings-card" id="settingsPanel" style="display: none;">
+                <div class="settings-header">
+                    <h2><i class="fas fa-cog"></i> Bottle Settings</h2>
+                    <button type="button" id="closeSettings" class="btn-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
                 <div class="settings-grid">
                     <div class="setting-item">
                         <label for="bottleWeight">Bottle Weight (KG):</label>
@@ -39,24 +39,33 @@
                     </div>
                 </div>
                 <button id="updateSettings" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Update Settings
+                    <i class="fas fa-save"></i> Save Settings
                 </button>
             </section>
 
-            <!-- Add New Connection -->
+            <!-- Add New Bottle -->
             <section class="add-connection-card">
-                <h2><i class="fas fa-plus"></i> Add New Connection</h2>
+                <h2><i class="fas fa-plus-circle"></i> Add New Bottle</h2>
                 <form id="connectionForm" class="connection-form">
                     <div class="form-group">
-                        <label for="connectionDate">Connection Date:</label>
+                        <label for="connectionDate">Date Connected:</label>
                         <input type="date" id="connectionDate" required>
                     </div>
-                    <div class="form-group">
-                        <label for="connectionCost">Cost (£):</label>
-                        <input type="number" id="connectionCost" min="0" step="0.01" required>
+                    <div class="current-settings-preview">
+                        <div class="setting-preview">
+                            <span class="setting-label">Weight:</span>
+                            <span id="previewWeight">47 KG</span>
+                        </div>
+                        <div class="setting-preview">
+                            <span class="setting-label">Price:</span>
+                            <span id="previewPrice">£83.50</span>
+                        </div>
+                        <button type="button" id="editSettings" class="btn-link">
+                            <i class="fas fa-edit"></i> Edit Settings
+                        </button>
                     </div>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-plus"></i> Add Connection
+                    <button type="submit" class="btn btn-success btn-large">
+                        <i class="fas fa-plus-circle"></i> Add Bottle
                     </button>
                 </form>
             </section>
