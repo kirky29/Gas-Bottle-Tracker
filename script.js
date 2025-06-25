@@ -73,44 +73,57 @@ class GasBottleTracker {
             throw new Error('Firebase not available');
         }
 
-        const { collection, doc, onSnapshot, query, orderBy } = this.firebase;
+        const { collection, doc, onSnapshot, query, orderBy, getDocs } = this.firebase;
 
-        // Test Firebase connection
-        const userDocRef = doc(db, 'users', this.userId);
-        
         try {
-            // Try to load existing data from Firebase
-            const docSnap = await this.firebase.getDoc(userDocRef);
-            if (docSnap.exists()) {
-                const firestoreData = docSnap.data();
-                
-                // Merge Firebase data with local data
-                if (firestoreData.connections) {
-                    this.connections = firestoreData.connections;
+            this.logDebug('Loading data from Firebase...', 'info');
+            
+            // Load user settings
+            const userDocRef = doc(db, 'users', this.userId);
+            const userDocSnap = await this.firebase.getDoc(userDocRef);
+            
+            if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                if (userData.settings) {
+                    this.settings = { ...this.settings, ...userData.settings };
+                    this.logDebug('Settings loaded from Firebase', 'success');
                 }
-                if (firestoreData.settings) {
-                    this.settings = { ...this.settings, ...firestoreData.settings };
-                }
-                
-                this.updateDisplay();
-                this.logDebug('Data loaded from Firebase', 'success');
-            } else {
-                // No existing data, save current local data to Firebase
-                await this.saveDataToFirebase();
-                this.logDebug('Local data saved to Firebase for first time', 'info');
             }
 
-            // Set up real-time listener
+            // Load connections from subcollection
             const connectionsRef = collection(db, 'users', this.userId, 'connections');
             const q = query(connectionsRef, orderBy('date', 'desc'));
+            const connectionsSnapshot = await getDocs(q);
             
+            this.connections = [];
+            connectionsSnapshot.forEach((doc) => {
+                const data = doc.data();
+                this.connections.push({
+                    id: parseInt(doc.id), // Convert back to number
+                    date: data.date,
+                    cost: data.cost,
+                    timestamp: data.timestamp
+                });
+            });
+            
+            this.logDebug(`Loaded ${this.connections.length} connections from Firebase`, 'success');
+            this.updateDisplay();
+
+            // Set up real-time listener for connections
             this.unsubscribe = onSnapshot(q, (snapshot) => {
                 const connections = [];
                 snapshot.forEach((doc) => {
-                    connections.push({ id: doc.id, ...doc.data() });
+                    const data = doc.data();
+                    connections.push({
+                        id: parseInt(doc.id),
+                        date: data.date,
+                        cost: data.cost,
+                        timestamp: data.timestamp
+                    });
                 });
                 
-                if (connections.length !== this.connections.length) {
+                // Only update if the data has actually changed
+                if (JSON.stringify(connections) !== JSON.stringify(this.connections)) {
                     this.connections = connections;
                     this.updateDisplay();
                     this.logDebug('Real-time update received from Firebase', 'info');
@@ -118,7 +131,14 @@ class GasBottleTracker {
             }, (error) => {
                 console.error('Real-time listener error:', error);
                 this.logDebug(`Real-time sync error: ${error.message}`, 'error');
+                this.updateSyncStatus('error');
             });
+
+            // If no data exists, save current local data
+            if (this.connections.length === 0 && !userDocSnap.exists()) {
+                await this.saveDataToFirebase();
+                this.logDebug('Initial data saved to Firebase', 'info');
+            }
 
         } catch (error) {
             console.error('Firebase data operation error:', error);
@@ -231,7 +251,7 @@ class GasBottleTracker {
         if (endDateEl) endDateEl.value = today.toISOString().split('T')[0];
     }
 
-    updateSettings() {
+    async updateSettings() {
         const bottleWeight = parseFloat(document.getElementById('bottleWeight').value);
         const bottlePrice = parseFloat(document.getElementById('bottlePrice').value);
 
@@ -243,10 +263,29 @@ class GasBottleTracker {
         this.settings.bottleWeight = bottleWeight;
         this.settings.bottlePrice = bottlePrice;
         
-        // Save to both local storage and Firebase
+        // Save to local storage immediately
         this.saveData();
-        if (firebaseLoaded) {
-            this.saveDataToFirebase();
+        
+        // Save settings to Firebase
+        if (firebaseLoaded && this.firebase) {
+            try {
+                const { doc, setDoc } = this.firebase;
+                const userDocRef = doc(db, 'users', this.userId);
+                await setDoc(userDocRef, {
+                    settings: this.settings,
+                    lastUpdated: new Date().toISOString(),
+                    totalConnections: this.connections.length
+                });
+                
+                this.logDebug('Settings saved to Firebase', 'success');
+                this.updateSyncStatus('connected');
+            } catch (error) {
+                console.error('Firebase settings save error:', error);
+                this.logDebug(`Firebase settings save error: ${error.message}`, 'error');
+                this.updateSyncStatus('error');
+            }
+        } else {
+            this.logDebug('Firebase not available, settings saved locally only', 'warning');
         }
         
         this.showMessage('Settings updated successfully!', 'success');
@@ -272,10 +311,14 @@ class GasBottleTracker {
         this.connections.push(connection);
         this.connections.sort((a, b) => new Date(b.date) - new Date(a.date));
         
-        // Save to both local storage and Firebase
+        // Save to local storage immediately
         this.saveData();
+        
+        // Save to Firebase
         if (firebaseLoaded) {
-            this.saveDataToFirebase();
+            this.saveConnectionToFirebase(connection);
+        } else {
+            this.logDebug('Firebase not available, connection saved locally only', 'warning');
         }
         
         this.resetForm();
@@ -283,14 +326,40 @@ class GasBottleTracker {
         this.updateDisplay();
     }
 
-    clearHistory() {
+    async clearHistory() {
         if (confirm('Are you sure you want to clear all connection history? This action cannot be undone.')) {
+            const connectionsToDelete = [...this.connections]; // Copy for Firebase deletion
             this.connections = [];
             
-            // Save to both local storage and Firebase
+            // Save to local storage immediately
             this.saveData();
-            if (firebaseLoaded) {
-                this.saveDataToFirebase();
+            
+            // Clear from Firebase
+            if (firebaseLoaded && this.firebase) {
+                try {
+                    const { doc, deleteDoc, setDoc } = this.firebase;
+                    
+                    // Delete all connection documents
+                    for (const connection of connectionsToDelete) {
+                        const connectionDocRef = doc(db, 'users', this.userId, 'connections', connection.id.toString());
+                        await deleteDoc(connectionDocRef);
+                    }
+                    
+                    // Update user summary
+                    const userDocRef = doc(db, 'users', this.userId);
+                    await setDoc(userDocRef, {
+                        settings: this.settings,
+                        lastUpdated: new Date().toISOString(),
+                        totalConnections: 0
+                    });
+                    
+                    this.logDebug('All connections cleared from Firebase', 'success');
+                } catch (error) {
+                    console.error('Firebase clear error:', error);
+                    this.logDebug(`Firebase clear error: ${error.message}`, 'error');
+                }
+            } else {
+                this.logDebug('Firebase not available, history cleared locally only', 'warning');
             }
             
             this.showMessage('History cleared successfully!', 'success');
@@ -538,10 +607,14 @@ class GasBottleTracker {
         if (confirm('Are you sure you want to delete this connection?')) {
             this.connections = this.connections.filter(conn => conn.id !== id);
             
-            // Save to both local storage and Firebase
+            // Save to local storage immediately
             this.saveData();
+            
+            // Delete from Firebase
             if (firebaseLoaded) {
-                this.saveDataToFirebase();
+                this.deleteConnectionFromFirebase(id);
+            } else {
+                this.logDebug('Firebase not available, connection deleted locally only', 'warning');
             }
             
             this.showMessage('Connection deleted successfully!', 'success');
@@ -601,23 +674,100 @@ class GasBottleTracker {
 
     async saveDataToFirebase() {
         if (!firebaseLoaded || !this.firebase) {
+            this.logDebug('Firebase not available, skipping save', 'warning');
+            return;
+        }
+
+        try {
+            const { doc, setDoc, collection } = this.firebase;
+            
+            // Save user settings
+            const userDocRef = doc(db, 'users', this.userId);
+            await setDoc(userDocRef, {
+                settings: this.settings,
+                lastUpdated: new Date().toISOString(),
+                totalConnections: this.connections.length
+            });
+            
+            // Save individual connections
+            for (const connection of this.connections) {
+                const connectionDocRef = doc(db, 'users', this.userId, 'connections', connection.id.toString());
+                await setDoc(connectionDocRef, {
+                    date: connection.date,
+                    cost: connection.cost,
+                    timestamp: connection.timestamp,
+                    bottleWeight: this.settings.bottleWeight // Store bottle weight at time of connection
+                });
+            }
+            
+            this.logDebug(`Data saved to Firebase successfully - ${this.connections.length} connections`, 'success');
+        } catch (error) {
+            console.error('Firebase save error:', error);
+            this.logDebug(`Firebase save error: ${error.message}`, 'error');
+            this.updateSyncStatus('error');
+        }
+    }
+
+    async saveConnectionToFirebase(connection) {
+        if (!firebaseLoaded || !this.firebase) {
+            this.logDebug('Firebase not available, skipping connection save', 'warning');
             return;
         }
 
         try {
             const { doc, setDoc } = this.firebase;
-            const userDocRef = doc(db, 'users', this.userId);
             
+            // Save individual connection
+            const connectionDocRef = doc(db, 'users', this.userId, 'connections', connection.id.toString());
+            await setDoc(connectionDocRef, {
+                date: connection.date,
+                cost: connection.cost,
+                timestamp: connection.timestamp,
+                bottleWeight: this.settings.bottleWeight
+            });
+
+            // Update user summary
+            const userDocRef = doc(db, 'users', this.userId);
             await setDoc(userDocRef, {
-                connections: this.connections,
                 settings: this.settings,
-                lastUpdated: new Date().toISOString()
+                lastUpdated: new Date().toISOString(),
+                totalConnections: this.connections.length
             });
             
-            this.logDebug('Data saved to Firebase successfully', 'success');
+            this.logDebug(`Connection ${connection.id} saved to Firebase`, 'success');
+            this.updateSyncStatus('connected');
         } catch (error) {
-            console.error('Firebase save error:', error);
-            this.logDebug(`Firebase save error: ${error.message}`, 'error');
+            console.error('Firebase connection save error:', error);
+            this.logDebug(`Firebase connection save error: ${error.message}`, 'error');
+            this.updateSyncStatus('error');
+        }
+    }
+
+    async deleteConnectionFromFirebase(connectionId) {
+        if (!firebaseLoaded || !this.firebase) {
+            this.logDebug('Firebase not available, skipping connection delete', 'warning');
+            return;
+        }
+
+        try {
+            const { doc, deleteDoc, setDoc } = this.firebase;
+            
+            // Delete the connection document
+            const connectionDocRef = doc(db, 'users', this.userId, 'connections', connectionId.toString());
+            await deleteDoc(connectionDocRef);
+
+            // Update user summary
+            const userDocRef = doc(db, 'users', this.userId);
+            await setDoc(userDocRef, {
+                settings: this.settings,
+                lastUpdated: new Date().toISOString(),
+                totalConnections: this.connections.length
+            });
+            
+            this.logDebug(`Connection ${connectionId} deleted from Firebase`, 'success');
+        } catch (error) {
+            console.error('Firebase connection delete error:', error);
+            this.logDebug(`Firebase connection delete error: ${error.message}`, 'error');
         }
     }
 
