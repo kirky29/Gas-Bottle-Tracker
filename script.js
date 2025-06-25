@@ -308,13 +308,127 @@ class GasBottleTracker {
         const totalSpent = this.connections.reduce((sum, conn) => sum + conn.cost, 0);
         const avgCost = totalConnections > 0 ? totalSpent / totalConnections : 0;
         const totalGas = totalConnections * this.settings.bottleWeight;
+        
+        // Calculate enhanced stats
+        const costPerDay = this.calculateCostPerDay();
+        const recentCostPerDay = this.calculateRecentCostPerDay();
+        const overallCostPerDay = this.calculateOverallCostPerDay();
+        const recentDaysBetween = this.calculateRecentDaysBetween();
+        const projectedMonthly = recentCostPerDay > 0 ? recentCostPerDay * 30 : 0;
 
         return {
             totalConnections,
             totalSpent,
             avgCost,
-            totalGas
+            totalGas,
+            costPerDay,
+            recentCostPerDay,
+            overallCostPerDay,
+            recentDaysBetween,
+            projectedMonthly
         };
+    }
+
+    calculateCostPerDay() {
+        if (this.connections.length < 2) {
+            return {
+                dailyRate: 0,
+                daysBetween: 0,
+                totalDays: 0,
+                averageDailyCost: 0
+            };
+        }
+
+        // Sort connections by date (oldest first for calculations)
+        const sortedConnections = [...this.connections].sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        const firstDate = new Date(sortedConnections[0].date);
+        const lastDate = new Date(sortedConnections[sortedConnections.length - 1].date);
+        
+        // Calculate total days between first and last connection
+        const totalDays = Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24));
+        
+        // Calculate total cost
+        const totalCost = sortedConnections.reduce((sum, conn) => sum + conn.cost, 0);
+        
+        // Calculate average daily cost over the entire period
+        const averageDailyCost = totalDays > 0 ? totalCost / totalDays : 0;
+
+        // Calculate average days between connections
+        let totalDaysBetween = 0;
+        for (let i = 1; i < sortedConnections.length; i++) {
+            const prevDate = new Date(sortedConnections[i - 1].date);
+            const currDate = new Date(sortedConnections[i].date);
+            const daysBetween = Math.ceil((currDate - prevDate) / (1000 * 60 * 60 * 24));
+            totalDaysBetween += daysBetween;
+        }
+        const avgDaysBetween = sortedConnections.length > 1 ? totalDaysBetween / (sortedConnections.length - 1) : 0;
+
+        // Calculate cost per day based on average days between bottles
+        const costPerDay = avgDaysBetween > 0 ? this.settings.bottlePrice / avgDaysBetween : 0;
+
+        return {
+            dailyRate: costPerDay,
+            daysBetween: avgDaysBetween,
+            totalDays: totalDays,
+            averageDailyCost: averageDailyCost
+        };
+    }
+
+    calculateRecentCostPerDay() {
+        if (this.connections.length < 2) {
+            return 0;
+        }
+
+        // Get the two most recent connections
+        const sortedConnections = [...this.connections].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const mostRecent = sortedConnections[0];
+        const secondMostRecent = sortedConnections[1];
+
+        const mostRecentDate = new Date(mostRecent.date);
+        const secondMostRecentDate = new Date(secondMostRecent.date);
+        
+        const daysBetween = Math.ceil((mostRecentDate - secondMostRecentDate) / (1000 * 60 * 60 * 24));
+        
+        if (daysBetween <= 0) {
+            return 0;
+        }
+
+        return this.settings.bottlePrice / daysBetween;
+    }
+
+    calculateOverallCostPerDay() {
+        if (this.connections.length < 2) {
+            return 0;
+        }
+
+        const sortedConnections = [...this.connections].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const firstDate = new Date(sortedConnections[0].date);
+        const lastDate = new Date(sortedConnections[sortedConnections.length - 1].date);
+        
+        const totalDays = Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24));
+        
+        if (totalDays <= 0) {
+            return 0;
+        }
+
+        const totalCost = sortedConnections.reduce((sum, conn) => sum + conn.cost, 0);
+        return totalCost / totalDays;
+    }
+
+    calculateRecentDaysBetween() {
+        if (this.connections.length < 2) {
+            return 0;
+        }
+
+        const sortedConnections = [...this.connections].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const mostRecent = sortedConnections[0];
+        const secondMostRecent = sortedConnections[1];
+
+        const mostRecentDate = new Date(mostRecent.date);
+        const secondMostRecentDate = new Date(secondMostRecent.date);
+        
+        return Math.ceil((mostRecentDate - secondMostRecentDate) / (1000 * 60 * 60 * 24));
     }
 
     updateDisplay() {
@@ -329,8 +443,61 @@ class GasBottleTracker {
         document.getElementById('avgCost').textContent = `£${stats.avgCost.toFixed(2)}`;
         document.getElementById('totalGas').textContent = `${stats.totalGas} KG`;
 
+        // Update cost per day statistics
+        this.updateCostPerDayDisplay(stats.costPerDay);
+
+        // Update enhanced cost analysis
+        this.updateEnhancedCostAnalysis(stats);
+
         // Update connections list
         this.updateConnectionsList();
+    }
+
+    updateCostPerDayDisplay(costPerDay) {
+        const costPerDayElement = document.getElementById('costPerDay');
+        const daysBetweenElement = document.getElementById('daysBetween');
+        const totalDaysElement = document.getElementById('totalDays');
+
+        if (costPerDayElement && costPerDay.dailyRate > 0) {
+            costPerDayElement.textContent = `£${costPerDay.dailyRate.toFixed(2)}`;
+        } else if (costPerDayElement) {
+            costPerDayElement.textContent = '£0.00';
+        }
+
+        if (daysBetweenElement && costPerDay.daysBetween > 0) {
+            daysBetweenElement.textContent = `${costPerDay.daysBetween.toFixed(1)} days`;
+        } else if (daysBetweenElement) {
+            daysBetweenElement.textContent = '0 days';
+        }
+
+        if (totalDaysElement && costPerDay.totalDays > 0) {
+            totalDaysElement.textContent = `${costPerDay.totalDays} days`;
+        } else if (totalDaysElement) {
+            totalDaysElement.textContent = '0 days';
+        }
+    }
+
+    updateEnhancedCostAnalysis(stats) {
+        const recentCostPerDayElement = document.getElementById('recentCostPerDay');
+        const overallCostPerDayElement = document.getElementById('overallCostPerDay');
+        const recentDaysBetweenElement = document.getElementById('recentDaysBetween');
+        const projectedMonthlyElement = document.getElementById('projectedMonthly');
+
+        if (recentCostPerDayElement) {
+            recentCostPerDayElement.textContent = `£${stats.recentCostPerDay.toFixed(2)}`;
+        }
+
+        if (overallCostPerDayElement) {
+            overallCostPerDayElement.textContent = `£${stats.overallCostPerDay.toFixed(2)}`;
+        }
+
+        if (recentDaysBetweenElement) {
+            recentDaysBetweenElement.textContent = `${stats.recentDaysBetween} days`;
+        }
+
+        if (projectedMonthlyElement) {
+            projectedMonthlyElement.textContent = `£${stats.projectedMonthly.toFixed(2)}`;
+        }
     }
 
     updateConnectionsList() {

@@ -324,6 +324,89 @@ body {
   gap: 1rem;
 }
 
+/* Cost Per Day Section */
+.cost-per-day-section {
+  border-top: 2px solid var(--bg-secondary);
+  padding-top: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.cost-per-day-section h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cost-per-day-section h3 i {
+  color: var(--primary-color);
+  font-size: 1rem;
+}
+
+.cost-per-day-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.cost-per-day-grid .stat-item {
+  background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+  border: 1px solid #81e6d9;
+}
+
+.cost-per-day-grid .stat-value {
+  color: #234e52;
+}
+
+.cost-per-day-grid .stat-label {
+  color: var(--text-secondary);
+}
+
+/* Enhanced Cost Analysis */
+.enhanced-cost-analysis {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--bg-secondary);
+}
+
+.enhanced-cost-analysis h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.enhanced-cost-analysis h4 i {
+  color: var(--primary-color);
+  font-size: 0.875rem;
+}
+
+.cost-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.cost-analysis-grid .stat-item {
+  background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+  border: 1px solid #c6f6d5;
+}
+
+.stat-note {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  font-style: italic;
+  opacity: 0.8;
+}
+
 .stat-item {
   text-align: center;
   padding: 1.5rem 1rem;
