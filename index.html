@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gas Bottle Tracker</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#667eea">
@@ -14,198 +14,282 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1><i class="fas fa-fire"></i> Gas Bottle Tracker</h1>
-            <p class="subtitle">Track your gas spending</p>
-
+            <div class="header-content">
+                <h1><i class="fas fa-fire"></i> Gas Bottle Tracker</h1>
+                <p class="subtitle">Smart gas usage analytics</p>
+            </div>
         </header>
 
         <main class="main-content">
-
-
-            <!-- Add New Bottle -->
-            <section class="add-connection-card">
-                <h2><i class="fas fa-plus-circle"></i> Add New Bottle</h2>
-                <form id="connectionForm" class="connection-form">
-                    <div class="form-group">
-                        <label for="connectionDate">Date Connected:</label>
-                        <input type="date" id="connectionDate" required>
-                    </div>
-                    <div class="current-settings-preview">
-                        <div class="setting-preview">
-                            <span class="setting-label">Weight:</span>
-                            <span id="previewWeight">47 KG</span>
+            <!-- Quick Action Card -->
+            <section class="quick-action-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-plus-circle"></i> Add New Bottle</h2>
+                </div>
+                <div class="card-content">
+                    <form id="connectionForm" class="connection-form">
+                        <div class="form-group">
+                            <label for="connectionDate">Connection Date:</label>
+                            <input type="date" id="connectionDate" required>
                         </div>
-                        <div class="setting-preview">
-                            <span class="setting-label">Price:</span>
-                            <span id="previewPrice">£83.50</span>
+                        <div class="current-settings-preview">
+                            <div class="settings-row">
+                                <div class="setting-preview">
+                                    <span class="setting-label">Weight:</span>
+                                    <span id="previewWeight">47 KG</span>
+                                </div>
+                                <div class="setting-preview">
+                                    <span class="setting-label">Price:</span>
+                                    <span id="previewPrice">£83.50</span>
+                                </div>
+                            </div>
+                            <button type="button" id="editSettings" class="btn-link">
+                                <i class="fas fa-cog"></i> Edit Settings
+                            </button>
                         </div>
-                        <button type="button" id="editSettings" class="btn-link">
-                            <i class="fas fa-edit"></i> Edit Settings
+                        <button type="submit" class="btn btn-primary btn-large">
+                            <i class="fas fa-plus-circle"></i> Add Bottle
                         </button>
-                    </div>
-                    <button type="submit" class="btn btn-success btn-large">
-                        <i class="fas fa-plus-circle"></i> Add Bottle
-                    </button>
-                </form>
+                    </form>
+                </div>
             </section>
 
-            <!-- Statistics -->
-            <section class="stats-card">
-                <h2><i class="fas fa-chart-bar"></i> Statistics</h2>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalConnections">0</div>
-                        <div class="stat-label">Total Connections</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalSpent">£0.00</div>
-                        <div class="stat-label">Total Spent</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="avgCost">£0.00</div>
-                        <div class="stat-label">Average Cost</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalGas">0 KG</div>
-                        <div class="stat-label">Total Gas</div>
-                    </div>
+            <!-- Overview Statistics -->
+            <section class="overview-stats-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-chart-bar"></i> Overview</h2>
                 </div>
-                
-                <!-- Cost per day statistics -->
-                <div class="cost-per-day-section">
-                    <h3><i class="fas fa-calendar-day"></i> Daily Spending Analysis</h3>
-                    <div class="cost-per-day-grid">
-                        <div class="stat-item">
-                            <div class="stat-value" id="costPerDay">£0.00</div>
-                            <div class="stat-label">Cost Per Day</div>
+                <div class="card-content">
+                    <div class="overview-grid">
+                        <div class="stat-card primary">
+                            <div class="stat-icon"><i class="fas fa-gas-pump"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="totalConnections">0</div>
+                                <div class="stat-label">Total Bottles</div>
+                            </div>
                         </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="daysBetween">0 days</div>
-                            <div class="stat-label">Avg Days Between</div>
+                        <div class="stat-card success">
+                            <div class="stat-icon"><i class="fas fa-pound-sign"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="totalSpent">£0.00</div>
+                                <div class="stat-label">Total Spent</div>
+                            </div>
                         </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="totalDays">0 days</div>
-                            <div class="stat-label">Total Period</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Enhanced cost analysis -->
-                    <div class="enhanced-cost-analysis">
-                        <h4><i class="fas fa-chart-line"></i> Detailed Cost Analysis</h4>
-                        <div class="cost-analysis-grid">
-                            <div class="stat-item">
+                        <div class="stat-card warning">
+                            <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+                            <div class="stat-content">
                                 <div class="stat-value" id="recentCostPerDay">£0.00</div>
-                                <div class="stat-label">Recent Cost/Day</div>
-                                <div class="stat-note">Last 2 bottles</div>
+                                <div class="stat-label">Current Daily Cost</div>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="overallCostPerDay">£0.00</div>
-                                <div class="stat-label">Overall Cost/Day</div>
-                                <div class="stat-note">All bottles</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="recentDaysBetween">0 days</div>
-                                <div class="stat-label">Recent Days Between</div>
-                                <div class="stat-note">Last 2 bottles</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="projectedMonthly">£0.00</div>
-                                <div class="stat-label">Projected Monthly</div>
-                                <div class="stat-note">Based on recent rate</div>
+                        </div>
+                        <div class="stat-card info">
+                            <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                            <div class="stat-content">
+                                <div class="stat-value" id="bottleEfficiencyRating">N/A</div>
+                                <div class="stat-label">Efficiency Rating</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Report Generator -->
-            <section class="report-card">
-                <h2><i class="fas fa-file-alt"></i> Custom Report</h2>
-                <div class="report-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="reportStartDate">Start Date:</label>
-                            <input type="date" id="reportStartDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="reportEndDate">End Date:</label>
-                            <input type="date" id="reportEndDate" required>
-                        </div>
-                    </div>
-                    <div class="report-actions">
-                        <button id="generateReport" class="btn btn-primary">
-                            <i class="fas fa-chart-bar"></i> Generate Report
-                        </button>
-                        <button id="exportReport" class="btn btn-success" style="display: none;">
-                            <i class="fas fa-download"></i> Export Report
-                        </button>
-                    </div>
+            <!-- Current vs Previous Analysis -->
+            <section class="comparison-card" id="comparisonSection" style="display: none;">
+                <div class="card-header">
+                    <h2><i class="fas fa-balance-scale"></i> Current vs Previous Bottle</h2>
                 </div>
-                
-                <div id="reportResults" class="report-results" style="display: none;">
-                    <h3><i class="fas fa-chart-pie"></i> Report Results</h3>
-                    <div class="report-stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-value" id="reportConnections">0</div>
-                            <div class="stat-label">Connections</div>
+                <div class="card-content">
+                    <div class="comparison-container">
+                        <div class="bottle-comparison">
+                            <div class="bottle-section current">
+                                <h3>Current Bottle</h3>
+                                <div class="bottle-stats">
+                                    <div class="bottle-stat">
+                                        <span class="value" id="currentBottleDays">N/A</span>
+                                        <span class="label">Days</span>
+                                    </div>
+                                    <div class="bottle-stat">
+                                        <span class="value" id="currentCostPerDay">N/A</span>
+                                        <span class="label">£/Day</span>
+                                    </div>
+                                    <div class="bottle-stat">
+                                        <span class="value" id="currentGasPerDay">N/A</span>
+                                        <span class="label">KG/Day</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="vs-divider">
+                                <span>VS</span>
+                            </div>
+                            <div class="bottle-section previous">
+                                <h3>Previous Bottle</h3>
+                                <div class="bottle-stats">
+                                    <div class="bottle-stat">
+                                        <span class="value" id="previousBottleDays">N/A</span>
+                                        <span class="label">Days</span>
+                                    </div>
+                                    <div class="bottle-stat">
+                                        <span class="value" id="previousCostPerDay">N/A</span>
+                                        <span class="label">£/Day</span>
+                                    </div>
+                                    <div class="bottle-stat">
+                                        <span class="value" id="previousGasPerDay">N/A</span>
+                                        <span class="label">KG/Day</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="reportTotalSpent">£0.00</div>
-                            <div class="stat-label">Total Spent</div>
+                        <div class="difference-indicators">
+                            <div class="indicator-item">
+                                <span class="indicator-label">Cost Difference:</span>
+                                <span class="indicator-value" id="costDifference">N/A</span>
+                            </div>
+                            <div class="indicator-item">
+                                <span class="indicator-label">Usage Difference:</span>
+                                <span class="indicator-value" id="gasEfficiencyDifference">N/A</span>
+                            </div>
                         </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="reportAvgCost">£0.00</div>
-                            <div class="stat-label">Average Cost</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="reportCostPerDay">£0.00</div>
-                            <div class="stat-label">Cost Per Day</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="reportPeriod">0 days</div>
-                            <div class="stat-label">Period Length</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="reportProjectedAnnual">£0.00</div>
-                            <div class="stat-label">Projected Annual</div>
-                        </div>
-                    </div>
-                    
-                    <div id="reportConnectionsList" class="report-connections-list">
-                        <!-- Report connections will be listed here -->
                     </div>
                 </div>
             </section>
 
-            <!-- Connections History -->
+            <!-- Detailed Analytics -->
+            <section class="analytics-tabs-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-chart-pie"></i> Detailed Analytics</h2>
+                    <div class="tab-buttons">
+                        <button class="tab-button active" data-tab="usage">Usage</button>
+                        <button class="tab-button" data-tab="costs">Costs</button>
+                        <button class="tab-button" data-tab="performance">Performance</button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <!-- Usage Tab -->
+                    <div class="tab-content active" id="usage-tab">
+                        <div class="analytics-grid">
+                            <div class="analytics-item">
+                                <div class="analytics-value" id="totalGasUsed">0 KG</div>
+                                <div class="analytics-label">Total Gas Used</div>
+                            </div>
+                            <div class="analytics-item">
+                                <div class="analytics-value" id="avgGasPerDay">0.00 KG</div>
+                                <div class="analytics-label">Average Gas/Day</div>
+                            </div>
+                            <div class="analytics-item">
+                                <div class="analytics-value" id="projectedAnnualGas">0 KG</div>
+                                <div class="analytics-label">Projected Annual</div>
+                            </div>
+                            <div class="analytics-item">
+                                <div class="analytics-value trend" id="gasEfficiencyTrend">0.00 KG/day</div>
+                                <div class="analytics-label">Efficiency Trend</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Costs Tab -->
+                    <div class="tab-content" id="costs-tab">
+                        <div class="analytics-grid">
+                            <div class="analytics-item">
+                                <div class="analytics-value" id="avgSpendingPerMonth">£0.00</div>
+                                <div class="analytics-label">Monthly Average</div>
+                            </div>
+                            <div class="analytics-item">
+                                <div class="analytics-value" id="costPerKg">£0.00</div>
+                                <div class="analytics-label">Cost per KG</div>
+                            </div>
+                            <div class="analytics-item">
+                                <div class="analytics-value" id="projectedAnnualSpending">£0.00</div>
+                                <div class="analytics-label">Projected Annual</div>
+                            </div>
+                            <div class="analytics-item">
+                                <div class="analytics-value" id="avgCost">£0.00</div>
+                                <div class="analytics-label">Average Bottle Cost</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Tab -->
+                    <div class="tab-content" id="performance-tab">
+                        <div class="analytics-grid">
+                            <div class="analytics-item">
+                                <div class="analytics-value" id="avgDaysBetweenBottles">0.0 days</div>
+                                <div class="analytics-label">Average Duration</div>
+                            </div>
+                            <div class="analytics-item">
+                                <div class="analytics-value" id="mostEfficientBottle">0 days</div>
+                                <div class="analytics-label">Best Performance</div>
+                            </div>
+                            <div class="analytics-item">
+                                <div class="analytics-value" id="leastEfficientBottle">0 days</div>
+                                <div class="analytics-label">Worst Performance</div>
+                            </div>
+                            <div class="analytics-item">
+                                <div class="analytics-value" id="totalDaysTracked">0 days</div>
+                                <div class="analytics-label">Total Period</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Efficiency Rating -->
+            <section class="efficiency-card" id="efficiencySection" style="display: none;">
+                <div class="card-header">
+                    <h2><i class="fas fa-star"></i> Efficiency Rating</h2>
+                </div>
+                <div class="card-content">
+                    <div class="efficiency-container">
+                        <div class="efficiency-main">
+                            <div class="efficiency-rating-display" id="bottleEfficiencyRatingDisplay">N/A</div>
+                            <div class="efficiency-description" id="bottleEfficiencyDescription">Need more data</div>
+                            <div class="efficiency-score">Score: <span id="bottleEfficiencyScore">0/100</span></div>
+                        </div>
+                        <div class="efficiency-factors">
+                            <h4>Rating Factors:</h4>
+                            <ul id="bottleEfficiencyFactors">
+                                <li>Add more bottles to see rating factors</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History -->
             <section class="history-card">
-                <h2><i class="fas fa-history"></i> Connection History</h2>
-                <div class="history-controls">
-                    <button id="clearHistory" class="btn btn-danger">
-                        <i class="fas fa-trash"></i> Clear History
+                <div class="card-header">
+                    <h2><i class="fas fa-history"></i> History</h2>
+                    <button id="clearHistory" class="btn btn-danger btn-small">
+                        <i class="fas fa-trash"></i> Clear
                     </button>
                 </div>
-                <div id="connectionsList" class="connections-list">
-                    <!-- Connections will be populated here -->
+                <div class="card-content">
+                    <div id="connectionsList" class="connections-list">
+                        <!-- Connections will be populated here -->
+                    </div>
                 </div>
             </section>
 
-            <!-- Debug Console -->
-            <section class="debug-card">
-                <h2><i class="fas fa-bug"></i> Debug Console</h2>
-                <div class="debug-controls">
-                    <button id="clearDebug" class="btn btn-secondary">
-                        <i class="fas fa-trash"></i> Clear Console
-                    </button>
-                    <button id="testFirebase" class="btn btn-primary">
-                        <i class="fas fa-fire"></i> Test Firebase
-                    </button>
-                    <button id="manualSync" class="btn btn-success">
-                        <i class="fas fa-sync"></i> Manual Sync
-                    </button>
+            <!-- Collapsible Debug Section -->
+            <section class="debug-card collapsible">
+                <div class="card-header clickable" id="debugToggle">
+                    <h2><i class="fas fa-bug"></i> Debug Console</h2>
+                    <i class="fas fa-chevron-down toggle-icon"></i>
                 </div>
-                <div id="debugConsole" class="debug-console">
-                    <div class="debug-entry">Debug console initialized...</div>
+                <div class="card-content" id="debugContent" style="display: none;">
+                    <div class="debug-controls">
+                        <button id="clearDebug" class="btn btn-secondary btn-small">
+                            <i class="fas fa-trash"></i> Clear
+                        </button>
+                        <button id="testFirebase" class="btn btn-primary btn-small">
+                            <i class="fas fa-fire"></i> Test Firebase
+                        </button>
+                        <button id="manualSync" class="btn btn-success btn-small">
+                            <i class="fas fa-sync"></i> Sync
+                        </button>
+                    </div>
+                    <div id="debugConsole" class="debug-console">
+                        <div class="debug-entry">Debug console initialized...</div>
+                    </div>
                 </div>
             </section>
         </main>

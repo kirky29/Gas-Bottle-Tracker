@@ -164,15 +164,6 @@ class GasBottleTracker {
             this.clearHistory();
         });
 
-        // Report functionality
-        document.getElementById('generateReport').addEventListener('click', () => {
-            this.generateReport();
-        });
-
-        document.getElementById('exportReport').addEventListener('click', () => {
-            this.exportReport();
-        });
-
         // Debug console controls
         const clearDebugBtn = document.getElementById('clearDebug');
         const testFirebaseBtn = document.getElementById('testFirebase');
@@ -196,9 +187,6 @@ class GasBottleTracker {
             });
         }
 
-        // Set default report dates
-        this.setDefaultReportDates();
-
         // Settings modal controls
         document.getElementById('editSettings').addEventListener('click', () => {
             this.showSettingsModal();
@@ -221,6 +209,51 @@ class GasBottleTracker {
                 this.hideSettingsModal();
             }
         });
+
+        // Tab functionality for analytics
+        this.setupTabs();
+
+        // Debug section toggle
+        this.setupDebugToggle();
+    }
+
+    setupTabs() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.dataset.tab;
+
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                document.getElementById(`${targetTab}-tab`).classList.add('active');
+            });
+        });
+    }
+
+    setupDebugToggle() {
+        const debugToggle = document.getElementById('debugToggle');
+        const debugContent = document.getElementById('debugContent');
+        const toggleIcon = debugToggle.querySelector('.toggle-icon');
+
+        if (debugToggle && debugContent && toggleIcon) {
+            debugToggle.addEventListener('click', () => {
+                const isVisible = debugContent.style.display !== 'none';
+                
+                if (isVisible) {
+                    debugContent.style.display = 'none';
+                    toggleIcon.classList.remove('rotated');
+                } else {
+                    debugContent.style.display = 'block';
+                    toggleIcon.classList.add('rotated');
+                }
+            });
+        }
     }
 
     updateSyncStatus(status) {
@@ -234,17 +267,7 @@ class GasBottleTracker {
         document.getElementById('connectionDate').value = today;
     }
 
-    setDefaultReportDates() {
-        const today = new Date();
-        const thirtyDaysAgo = new Date(today);
-        thirtyDaysAgo.setDate(today.getDate() - 30);
-        
-        const startDateEl = document.getElementById('reportStartDate');
-        const endDateEl = document.getElementById('reportEndDate');
-        
-        if (startDateEl) startDateEl.value = thirtyDaysAgo.toISOString().split('T')[0];
-        if (endDateEl) endDateEl.value = today.toISOString().split('T')[0];
-    }
+
 
     showSettingsModal() {
         const modal = document.getElementById('settingsModal');
@@ -398,6 +421,12 @@ class GasBottleTracker {
         const recentDaysBetween = this.calculateRecentDaysBetween();
         const projectedMonthly = recentCostPerDay > 0 ? recentCostPerDay * 30 : 0;
 
+        // Calculate new comprehensive statistics
+        const currentVsPreviousBottle = this.calculateCurrentVsPreviousBottle();
+        const gasUsageStats = this.calculateGasUsageStats();
+        const bottleAverages = this.calculateBottleAverages();
+        const comprehensiveStats = this.calculateComprehensiveStats();
+
         return {
             totalConnections,
             totalSpent,
@@ -407,7 +436,11 @@ class GasBottleTracker {
             recentCostPerDay,
             overallCostPerDay,
             recentDaysBetween,
-            projectedMonthly
+            projectedMonthly,
+            currentVsPreviousBottle,
+            gasUsageStats,
+            bottleAverages,
+            comprehensiveStats
         };
     }
 
@@ -513,6 +546,335 @@ class GasBottleTracker {
         return Math.ceil((mostRecentDate - secondMostRecentDate) / (1000 * 60 * 60 * 24));
     }
 
+    calculateCurrentVsPreviousBottle() {
+        if (this.connections.length < 2) {
+            return {
+                currentBottleDays: 0,
+                previousBottleDays: 0,
+                currentCostPerDay: 0,
+                previousCostPerDay: 0,
+                currentGasPerDay: 0,
+                previousGasPerDay: 0,
+                costDifference: 0,
+                gasEfficiencyDifference: 0,
+                hasData: false
+            };
+        }
+
+        const sortedConnections = [...this.connections].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const currentBottle = sortedConnections[0];
+        const previousBottle = sortedConnections[1];
+        const thirdBottle = sortedConnections[2] || null;
+
+        // Current bottle analysis (from current bottle back to previous)
+        const currentBottleDate = new Date(currentBottle.date);
+        const previousBottleDate = new Date(previousBottle.date);
+        const currentBottleDays = Math.ceil((currentBottleDate - previousBottleDate) / (1000 * 60 * 60 * 24));
+
+        // Previous bottle analysis (from previous bottle back to the one before)
+        let previousBottleDays = 0;
+        if (thirdBottle) {
+            const thirdBottleDate = new Date(thirdBottle.date);
+            previousBottleDays = Math.ceil((previousBottleDate - thirdBottleDate) / (1000 * 60 * 60 * 24));
+        }
+
+        // Calculate cost per day for each bottle
+        const currentCostPerDay = currentBottleDays > 0 ? currentBottle.cost / currentBottleDays : 0;
+        const previousCostPerDay = previousBottleDays > 0 ? previousBottle.cost / previousBottleDays : 0;
+
+        // Calculate gas usage per day (weight / days)
+        const currentGasPerDay = currentBottleDays > 0 ? this.settings.bottleWeight / currentBottleDays : 0;
+        const previousGasPerDay = previousBottleDays > 0 ? this.settings.bottleWeight / previousBottleDays : 0;
+
+        // Calculate differences
+        const costDifference = currentCostPerDay - previousCostPerDay;
+        const gasEfficiencyDifference = currentGasPerDay - previousGasPerDay;
+
+        return {
+            currentBottleDays,
+            previousBottleDays,
+            currentCostPerDay,
+            previousCostPerDay,
+            currentGasPerDay,
+            previousGasPerDay,
+            costDifference,
+            gasEfficiencyDifference,
+            hasData: true,
+            currentBottleDate: currentBottle.date,
+            previousBottleDate: previousBottle.date,
+            currentBottleCost: currentBottle.cost,
+            previousBottleCost: previousBottle.cost
+        };
+    }
+
+    calculateGasUsageStats() {
+        if (this.connections.length === 0) {
+            return {
+                totalGasUsed: 0,
+                avgGasPerBottle: 0,
+                avgGasPerDay: 0,
+                gasEfficiencyTrend: 0,
+                projectedAnnualGas: 0
+            };
+        }
+
+        const totalGasUsed = this.connections.length * this.settings.bottleWeight;
+        const avgGasPerBottle = this.settings.bottleWeight; // This is constant per bottle
+
+        // Calculate average gas per day across all bottles
+        let avgGasPerDay = 0;
+        if (this.connections.length >= 2) {
+            const sortedConnections = [...this.connections].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const firstDate = new Date(sortedConnections[0].date);
+            const lastDate = new Date(sortedConnections[sortedConnections.length - 1].date);
+            const totalDays = Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24));
+            
+            if (totalDays > 0) {
+                avgGasPerDay = totalGasUsed / totalDays;
+            }
+        }
+
+        // Calculate gas efficiency trend (comparing recent vs older usage)
+        let gasEfficiencyTrend = 0;
+        if (this.connections.length >= 4) {
+            const recentConnections = this.connections.slice(0, Math.ceil(this.connections.length / 2));
+            const olderConnections = this.connections.slice(Math.ceil(this.connections.length / 2));
+            
+            const recentAvgDays = this.calculateAvgDaysBetweenConnections(recentConnections);
+            const olderAvgDays = this.calculateAvgDaysBetweenConnections(olderConnections);
+            
+            const recentGasPerDay = recentAvgDays > 0 ? this.settings.bottleWeight / recentAvgDays : 0;
+            const olderGasPerDay = olderAvgDays > 0 ? this.settings.bottleWeight / olderAvgDays : 0;
+            
+            gasEfficiencyTrend = recentGasPerDay - olderGasPerDay;
+        }
+
+        // Project annual gas usage based on current rate
+        const projectedAnnualGas = avgGasPerDay * 365;
+
+        return {
+            totalGasUsed,
+            avgGasPerBottle,
+            avgGasPerDay,
+            gasEfficiencyTrend,
+            projectedAnnualGas
+        };
+    }
+
+    calculateBottleAverages() {
+        if (this.connections.length < 2) {
+            return {
+                avgDaysBetweenBottles: 0,
+                avgCostPerBottle: 0,
+                avgCostPerDay: 0,
+                avgGasPerDay: 0,
+                medianDaysBetween: 0,
+                mostEfficientBottleDays: 0,
+                leastEfficientBottleDays: 0
+            };
+        }
+
+        // Calculate days between each bottle
+        const sortedConnections = [...this.connections].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const daysBetweenBottles = [];
+        
+        for (let i = 1; i < sortedConnections.length; i++) {
+            const prevDate = new Date(sortedConnections[i - 1].date);
+            const currDate = new Date(sortedConnections[i].date);
+            const days = Math.ceil((currDate - prevDate) / (1000 * 60 * 60 * 24));
+            daysBetweenBottles.push(days);
+        }
+
+        const avgDaysBetweenBottles = daysBetweenBottles.reduce((sum, days) => sum + days, 0) / daysBetweenBottles.length;
+        const avgCostPerBottle = this.connections.reduce((sum, conn) => sum + conn.cost, 0) / this.connections.length;
+        const avgCostPerDay = avgDaysBetweenBottles > 0 ? avgCostPerBottle / avgDaysBetweenBottles : 0;
+        const avgGasPerDay = avgDaysBetweenBottles > 0 ? this.settings.bottleWeight / avgDaysBetweenBottles : 0;
+
+        // Calculate median
+        const sortedDays = [...daysBetweenBottles].sort((a, b) => a - b);
+        const medianDaysBetween = sortedDays.length > 0 ? 
+            sortedDays.length % 2 === 0 ? 
+                (sortedDays[sortedDays.length / 2 - 1] + sortedDays[sortedDays.length / 2]) / 2 :
+                sortedDays[Math.floor(sortedDays.length / 2)] : 0;
+
+        // Find most and least efficient bottles
+        const mostEfficientBottleDays = Math.max(...daysBetweenBottles, 0);
+        const leastEfficientBottleDays = Math.min(...daysBetweenBottles, 0);
+
+        return {
+            avgDaysBetweenBottles,
+            avgCostPerBottle,
+            avgCostPerDay,
+            avgGasPerDay,
+            medianDaysBetween,
+            mostEfficientBottleDays,
+            leastEfficientBottleDays
+        };
+    }
+
+    calculateComprehensiveStats() {
+        const totalSpent = this.connections.reduce((sum, conn) => sum + conn.cost, 0);
+        const totalBottles = this.connections.length;
+        
+        // Calculate time-based statistics
+        let timeStats = {
+            totalDaysTracked: 0,
+            avgBottleLifespan: 0,
+            shortestBottleLifespan: 0,
+            longestBottleLifespan: 0
+        };
+
+        if (this.connections.length >= 2) {
+            const sortedConnections = [...this.connections].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const firstDate = new Date(sortedConnections[0].date);
+            const lastDate = new Date(sortedConnections[sortedConnections.length - 1].date);
+            timeStats.totalDaysTracked = Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24));
+
+            // Calculate individual bottle lifespans
+            const bottleLifespans = [];
+            for (let i = 1; i < sortedConnections.length; i++) {
+                const prevDate = new Date(sortedConnections[i - 1].date);
+                const currDate = new Date(sortedConnections[i].date);
+                const days = Math.ceil((currDate - prevDate) / (1000 * 60 * 60 * 24));
+                bottleLifespans.push(days);
+            }
+
+            if (bottleLifespans.length > 0) {
+                timeStats.avgBottleLifespan = bottleLifespans.reduce((sum, days) => sum + days, 0) / bottleLifespans.length;
+                timeStats.shortestBottleLifespan = Math.min(...bottleLifespans);
+                timeStats.longestBottleLifespan = Math.max(...bottleLifespans);
+            }
+        }
+
+        // Calculate cost efficiency metrics
+        const costEfficiency = {
+            totalSpent,
+            avgSpendingPerMonth: 0,
+            costPerKg: totalBottles > 0 ? totalSpent / (totalBottles * this.settings.bottleWeight) : 0,
+            projectedAnnualSpending: 0
+        };
+
+        if (timeStats.totalDaysTracked > 0) {
+            const dailySpending = totalSpent / timeStats.totalDaysTracked;
+            costEfficiency.avgSpendingPerMonth = dailySpending * 30;
+            costEfficiency.projectedAnnualSpending = dailySpending * 365;
+        }
+
+        return {
+            timeStats,
+            costEfficiency,
+            bottleEfficiencyRating: this.calculateBottleEfficiencyRating()
+        };
+    }
+
+    calculateBottleEfficiencyRating() {
+        if (this.connections.length < 3) {
+            return { rating: 'N/A', description: 'Need more data', score: 0 };
+        }
+
+        const recentStats = this.calculateCurrentVsPreviousBottle();
+        const averages = this.calculateBottleAverages();
+        
+        let score = 0;
+        let factors = [];
+
+        // Factor 1: Current bottle efficiency vs average
+        if (recentStats.hasData && recentStats.currentBottleDays > 0) {
+            const currentEfficiency = recentStats.currentBottleDays;
+            const avgEfficiency = averages.avgDaysBetweenBottles;
+            
+            if (currentEfficiency > avgEfficiency * 1.1) {
+                score += 25;
+                factors.push('Above average bottle lifespan');
+            } else if (currentEfficiency < avgEfficiency * 0.9) {
+                score -= 15;
+                factors.push('Below average bottle lifespan');
+            } else {
+                score += 10;
+                factors.push('Average bottle lifespan');
+            }
+        }
+
+        // Factor 2: Consistency (low variance in bottle lifespans)
+        const bottleAverages = this.calculateBottleAverages();
+        const consistencyScore = (bottleAverages.mostEfficientBottleDays - bottleAverages.leastEfficientBottleDays);
+        if (consistencyScore < 7) {
+            score += 25;
+            factors.push('Very consistent usage');
+        } else if (consistencyScore < 14) {
+            score += 15;
+            factors.push('Fairly consistent usage');
+        } else {
+            score += 5;
+            factors.push('Variable usage patterns');
+        }
+
+        // Factor 3: Improvement trend
+        if (recentStats.hasData) {
+            if (recentStats.currentBottleDays > recentStats.previousBottleDays) {
+                score += 20;
+                factors.push('Improving efficiency');
+            } else if (recentStats.currentBottleDays < recentStats.previousBottleDays) {
+                score -= 10;
+                factors.push('Declining efficiency');
+            }
+        }
+
+        // Factor 4: Overall efficiency based on bottle lifespan
+        if (averages.avgDaysBetweenBottles > 21) {
+            score += 30;
+            factors.push('Excellent bottle longevity');
+        } else if (averages.avgDaysBetweenBottles > 14) {
+            score += 20;
+            factors.push('Good bottle longevity');
+        } else if (averages.avgDaysBetweenBottles > 7) {
+            score += 10;
+            factors.push('Average bottle longevity');
+        } else {
+            score -= 10;
+            factors.push('Short bottle lifespan');
+        }
+
+        // Determine rating
+        let rating, description;
+        if (score >= 80) {
+            rating = 'Excellent';
+            description = 'Very efficient gas usage';
+        } else if (score >= 60) {
+            rating = 'Good';
+            description = 'Above average efficiency';
+        } else if (score >= 40) {
+            rating = 'Average';
+            description = 'Standard gas usage patterns';
+        } else if (score >= 20) {
+            rating = 'Below Average';
+            description = 'Room for improvement';
+        } else {
+            rating = 'Poor';
+            description = 'Consider usage optimization';
+        }
+
+        return { rating, description, score, factors };
+    }
+
+    calculateAvgDaysBetweenConnections(connections) {
+        if (connections.length < 2) return 0;
+
+        const sortedConnections = [...connections].sort((a, b) => new Date(a.date) - new Date(b.date));
+        let totalDays = 0;
+        let intervals = 0;
+
+        for (let i = 1; i < sortedConnections.length; i++) {
+            const prevDate = new Date(sortedConnections[i - 1].date);
+            const currDate = new Date(sortedConnections[i].date);
+            const days = Math.ceil((currDate - prevDate) / (1000 * 60 * 60 * 24));
+            totalDays += days;
+            intervals++;
+        }
+
+        return intervals > 0 ? totalDays / intervals : 0;
+    }
+
     updateDisplay() {
         // Update settings inputs
         document.getElementById('bottleWeight').value = this.settings.bottleWeight;
@@ -520,16 +882,26 @@ class GasBottleTracker {
 
         // Calculate and update statistics
         const stats = this.calculateStats();
+        
+        // Update overview stats
         document.getElementById('totalConnections').textContent = stats.totalConnections;
         document.getElementById('totalSpent').textContent = `£${stats.totalSpent.toFixed(2)}`;
-        document.getElementById('avgCost').textContent = `£${stats.avgCost.toFixed(2)}`;
-        document.getElementById('totalGas').textContent = `${stats.totalGas} KG`;
+        document.getElementById('recentCostPerDay').textContent = `£${stats.recentCostPerDay.toFixed(2)}`;
+        
+        // Update efficiency rating in overview
+        const overviewRating = document.getElementById('bottleEfficiencyRating');
+        if (overviewRating) {
+            overviewRating.textContent = stats.comprehensiveStats.bottleEfficiencyRating.rating;
+            overviewRating.className = `stat-value rating-${stats.comprehensiveStats.bottleEfficiencyRating.rating.toLowerCase().replace(' ', '-')}`;
+        }
 
-        // Update cost per day statistics
-        this.updateCostPerDayDisplay(stats.costPerDay);
+        // Update all detailed statistics
+        this.updateCurrentVsPreviousBottleDisplay(stats.currentVsPreviousBottle);
+        this.updateAnalyticsTabsDisplay(stats);
+        this.updateEfficiencyDisplay(stats.comprehensiveStats);
 
-        // Update enhanced cost analysis
-        this.updateEnhancedCostAnalysis(stats);
+        // Show/hide sections based on data availability
+        this.updateSectionVisibility(stats);
 
         // Update connections list
         this.updateConnectionsList();
@@ -538,50 +910,137 @@ class GasBottleTracker {
         this.updateSettingsPreview();
     }
 
-    updateCostPerDayDisplay(costPerDay) {
-        const costPerDayElement = document.getElementById('costPerDay');
-        const daysBetweenElement = document.getElementById('daysBetween');
-        const totalDaysElement = document.getElementById('totalDays');
+    updateAnalyticsTabsDisplay(stats) {
+        // Usage tab
+        const totalGasUsedEl = document.getElementById('totalGasUsed');
+        const avgGasPerDayEl = document.getElementById('avgGasPerDay');
+        const projectedAnnualGasEl = document.getElementById('projectedAnnualGas');
+        const gasEfficiencyTrendEl = document.getElementById('gasEfficiencyTrend');
 
-        if (costPerDayElement && costPerDay.dailyRate > 0) {
-            costPerDayElement.textContent = `£${costPerDay.dailyRate.toFixed(2)}`;
-        } else if (costPerDayElement) {
-            costPerDayElement.textContent = '£0.00';
+        if (totalGasUsedEl) totalGasUsedEl.textContent = `${stats.gasUsageStats.totalGasUsed} KG`;
+        if (avgGasPerDayEl) avgGasPerDayEl.textContent = `${stats.gasUsageStats.avgGasPerDay.toFixed(2)} KG`;
+        if (projectedAnnualGasEl) projectedAnnualGasEl.textContent = `${stats.gasUsageStats.projectedAnnualGas.toFixed(0)} KG`;
+
+        if (gasEfficiencyTrendEl) {
+            const trend = stats.gasUsageStats.gasEfficiencyTrend;
+            const prefix = trend > 0 ? '+' : '';
+            const trendClass = trend > 0 ? 'trend-up' : trend < 0 ? 'trend-down' : 'trend-neutral';
+            gasEfficiencyTrendEl.textContent = `${prefix}${trend.toFixed(2)} KG/day`;
+            gasEfficiencyTrendEl.className = `analytics-value trend ${trendClass}`;
         }
 
-        if (daysBetweenElement && costPerDay.daysBetween > 0) {
-            daysBetweenElement.textContent = `${costPerDay.daysBetween.toFixed(1)} days`;
-        } else if (daysBetweenElement) {
-            daysBetweenElement.textContent = '0 days';
+        // Costs tab
+        const avgSpendingPerMonthEl = document.getElementById('avgSpendingPerMonth');
+        const costPerKgEl = document.getElementById('costPerKg');
+        const projectedAnnualSpendingEl = document.getElementById('projectedAnnualSpending');
+        const avgCostEl = document.getElementById('avgCost');
+
+        if (avgSpendingPerMonthEl) avgSpendingPerMonthEl.textContent = `£${stats.comprehensiveStats.costEfficiency.avgSpendingPerMonth.toFixed(2)}`;
+        if (costPerKgEl) costPerKgEl.textContent = `£${stats.comprehensiveStats.costEfficiency.costPerKg.toFixed(2)}`;
+        if (projectedAnnualSpendingEl) projectedAnnualSpendingEl.textContent = `£${stats.comprehensiveStats.costEfficiency.projectedAnnualSpending.toFixed(2)}`;
+        if (avgCostEl) avgCostEl.textContent = `£${stats.avgCost.toFixed(2)}`;
+
+        // Performance tab
+        const avgDaysBetweenBottlesEl = document.getElementById('avgDaysBetweenBottles');
+        const mostEfficientBottleEl = document.getElementById('mostEfficientBottle');
+        const leastEfficientBottleEl = document.getElementById('leastEfficientBottle');
+        const totalDaysTrackedEl = document.getElementById('totalDaysTracked');
+
+        if (avgDaysBetweenBottlesEl) avgDaysBetweenBottlesEl.textContent = `${stats.bottleAverages.avgDaysBetweenBottles.toFixed(1)} days`;
+        if (mostEfficientBottleEl) mostEfficientBottleEl.textContent = `${stats.bottleAverages.mostEfficientBottleDays} days`;
+        if (leastEfficientBottleEl) leastEfficientBottleEl.textContent = `${stats.bottleAverages.leastEfficientBottleDays} days`;
+        if (totalDaysTrackedEl) totalDaysTrackedEl.textContent = `${stats.comprehensiveStats.timeStats.totalDaysTracked} days`;
+    }
+
+    updateCurrentVsPreviousBottleDisplay(currentVsPrevious) {
+        // Current vs Previous Bottle Analysis
+        const currentBottleDaysEl = document.getElementById('currentBottleDays');
+        const previousBottleDaysEl = document.getElementById('previousBottleDays');
+        const currentCostPerDayEl = document.getElementById('currentCostPerDay');
+        const previousCostPerDayEl = document.getElementById('previousCostPerDay');
+        const currentGasPerDayEl = document.getElementById('currentGasPerDay');
+        const previousGasPerDayEl = document.getElementById('previousGasPerDay');
+        const costDifferenceEl = document.getElementById('costDifference');
+        const gasEfficiencyDifferenceEl = document.getElementById('gasEfficiencyDifference');
+
+        if (!currentVsPrevious.hasData) {
+            // Show "Need more data" message for all elements
+            const elements = [currentBottleDaysEl, previousBottleDaysEl, currentCostPerDayEl, 
+                            previousCostPerDayEl, currentGasPerDayEl, previousGasPerDayEl, 
+                            costDifferenceEl, gasEfficiencyDifferenceEl];
+            elements.forEach(el => {
+                if (el) el.textContent = 'N/A';
+            });
+            return;
         }
 
-        if (totalDaysElement && costPerDay.totalDays > 0) {
-            totalDaysElement.textContent = `${costPerDay.totalDays} days`;
-        } else if (totalDaysElement) {
-            totalDaysElement.textContent = '0 days';
+        if (currentBottleDaysEl) currentBottleDaysEl.textContent = `${currentVsPrevious.currentBottleDays}`;
+        if (previousBottleDaysEl) previousBottleDaysEl.textContent = `${currentVsPrevious.previousBottleDays}`;
+        if (currentCostPerDayEl) currentCostPerDayEl.textContent = `£${currentVsPrevious.currentCostPerDay.toFixed(2)}`;
+        if (previousCostPerDayEl) previousCostPerDayEl.textContent = `£${currentVsPrevious.previousCostPerDay.toFixed(2)}`;
+        if (currentGasPerDayEl) currentGasPerDayEl.textContent = `${currentVsPrevious.currentGasPerDay.toFixed(2)}`;
+        if (previousGasPerDayEl) previousGasPerDayEl.textContent = `${currentVsPrevious.previousGasPerDay.toFixed(2)}`;
+        
+        // Cost difference with trend indicator
+        if (costDifferenceEl) {
+            const diff = currentVsPrevious.costDifference;
+            const prefix = diff > 0 ? '+' : '';
+            const trendClass = diff > 0 ? 'trend-up' : diff < 0 ? 'trend-down' : 'trend-neutral';
+            costDifferenceEl.textContent = `${prefix}£${diff.toFixed(2)}`;
+            costDifferenceEl.className = `indicator-value ${trendClass}`;
+        }
+
+        // Gas efficiency difference with trend indicator  
+        if (gasEfficiencyDifferenceEl) {
+            const diff = currentVsPrevious.gasEfficiencyDifference;
+            const prefix = diff > 0 ? '+' : '';
+            const trendClass = diff > 0 ? 'trend-up' : diff < 0 ? 'trend-down' : 'trend-neutral';
+            gasEfficiencyDifferenceEl.textContent = `${prefix}${diff.toFixed(2)} KG`;
+            gasEfficiencyDifferenceEl.className = `indicator-value ${trendClass}`;
         }
     }
 
-    updateEnhancedCostAnalysis(stats) {
-        const recentCostPerDayElement = document.getElementById('recentCostPerDay');
-        const overallCostPerDayElement = document.getElementById('overallCostPerDay');
-        const recentDaysBetweenElement = document.getElementById('recentDaysBetween');
-        const projectedMonthlyElement = document.getElementById('projectedMonthly');
+    updateEfficiencyDisplay(comprehensiveStats) {
+        // Efficiency rating in detailed section
+        const bottleEfficiencyRatingDisplayEl = document.getElementById('bottleEfficiencyRatingDisplay');
+        const bottleEfficiencyDescriptionEl = document.getElementById('bottleEfficiencyDescription');
+        const bottleEfficiencyScoreEl = document.getElementById('bottleEfficiencyScore');
+        const bottleEfficiencyFactorsEl = document.getElementById('bottleEfficiencyFactors');
 
-        if (recentCostPerDayElement) {
-            recentCostPerDayElement.textContent = `£${stats.recentCostPerDay.toFixed(2)}`;
+        const rating = comprehensiveStats.bottleEfficiencyRating;
+        if (bottleEfficiencyRatingDisplayEl) {
+            bottleEfficiencyRatingDisplayEl.textContent = rating.rating;
+            bottleEfficiencyRatingDisplayEl.className = `efficiency-rating-display rating-${rating.rating.toLowerCase().replace(' ', '-')}`;
+        }
+        if (bottleEfficiencyDescriptionEl) bottleEfficiencyDescriptionEl.textContent = rating.description;
+        if (bottleEfficiencyScoreEl) bottleEfficiencyScoreEl.textContent = `${rating.score}/100`;
+        
+        if (bottleEfficiencyFactorsEl && rating.factors) {
+            bottleEfficiencyFactorsEl.innerHTML = rating.factors.map(factor => 
+                `<li class="efficiency-factor">${factor}</li>`
+            ).join('');
+        }
+    }
+
+    updateSectionVisibility(stats) {
+        // Show comparison section only if we have at least 2 bottles
+        const comparisonSection = document.getElementById('comparisonSection');
+        if (comparisonSection) {
+            if (stats.totalConnections >= 2) {
+                comparisonSection.style.display = 'block';
+            } else {
+                comparisonSection.style.display = 'none';
+            }
         }
 
-        if (overallCostPerDayElement) {
-            overallCostPerDayElement.textContent = `£${stats.overallCostPerDay.toFixed(2)}`;
-        }
-
-        if (recentDaysBetweenElement) {
-            recentDaysBetweenElement.textContent = `${stats.recentDaysBetween} days`;
-        }
-
-        if (projectedMonthlyElement) {
-            projectedMonthlyElement.textContent = `£${stats.projectedMonthly.toFixed(2)}`;
+        // Show efficiency section only if we have at least 3 bottles
+        const efficiencySection = document.getElementById('efficiencySection');
+        if (efficiencySection) {
+            if (stats.totalConnections >= 3) {
+                efficiencySection.style.display = 'block';
+            } else {
+                efficiencySection.style.display = 'none';
+            }
         }
     }
 
@@ -868,15 +1327,7 @@ class GasBottleTracker {
         }
     }
 
-    generateReport() {
-        // Placeholder for report functionality
-        this.showMessage('Report feature not yet implemented in this version', 'info');
-    }
 
-    exportReport() {
-        // Placeholder for export functionality
-        this.showMessage('Export feature not yet implemented in this version', 'info');
-    }
 }
 
 // Initialize the app when the DOM is loaded
