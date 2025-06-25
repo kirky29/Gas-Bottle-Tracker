@@ -20,28 +20,7 @@
         </header>
 
         <main class="main-content">
-            <!-- Settings Panel (initially hidden) -->
-            <section class="settings-card" id="settingsPanel" style="display: none;">
-                <div class="settings-header">
-                    <h2><i class="fas fa-cog"></i> Bottle Settings</h2>
-                    <button type="button" id="closeSettings" class="btn-close">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="settings-grid">
-                    <div class="setting-item">
-                        <label for="bottleWeight">Bottle Weight (KG):</label>
-                        <input type="number" id="bottleWeight" value="47" min="1" step="0.1">
-                    </div>
-                    <div class="setting-item">
-                        <label for="bottlePrice">Bottle Price (£):</label>
-                        <input type="number" id="bottlePrice" value="83.50" min="0" step="0.01">
-                    </div>
-                </div>
-                <button id="updateSettings" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Save Settings
-                </button>
-            </section>
+
 
             <!-- Add New Bottle -->
             <section class="add-connection-card">
@@ -230,6 +209,36 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-cog"></i> Bottle Settings</h2>
+                <button type="button" id="closeSettings" class="btn-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label for="bottleWeight">Bottle Weight (KG):</label>
+                        <input type="number" id="bottleWeight" value="47" min="1" step="0.1">
+                    </div>
+                    <div class="setting-item">
+                        <label for="bottlePrice">Bottle Price (£):</label>
+                        <input type="number" id="bottlePrice" value="83.50" min="0" step="0.01">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="updateSettings" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="script.js"></script>

@@ -199,13 +199,27 @@ class GasBottleTracker {
         // Set default report dates
         this.setDefaultReportDates();
 
-        // Settings panel controls
+        // Settings modal controls
         document.getElementById('editSettings').addEventListener('click', () => {
-            this.showSettingsPanel();
+            this.showSettingsModal();
         });
 
         document.getElementById('closeSettings').addEventListener('click', () => {
-            this.hideSettingsPanel();
+            this.hideSettingsModal();
+        });
+
+        // Close modal when clicking backdrop
+        document.getElementById('settingsModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-backdrop')) {
+                this.hideSettingsModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('settingsModal').classList.contains('show')) {
+                this.hideSettingsModal();
+            }
         });
     }
 
@@ -232,12 +246,16 @@ class GasBottleTracker {
         if (endDateEl) endDateEl.value = today.toISOString().split('T')[0];
     }
 
-    showSettingsPanel() {
-        document.getElementById('settingsPanel').style.display = 'block';
+    showSettingsModal() {
+        const modal = document.getElementById('settingsModal');
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
     }
 
-    hideSettingsPanel() {
-        document.getElementById('settingsPanel').style.display = 'none';
+    hideSettingsModal() {
+        const modal = document.getElementById('settingsModal');
+        modal.classList.remove('show');
+        document.body.style.overflow = ''; // Restore scrolling
     }
 
     updateSettingsPreview() {
@@ -285,7 +303,7 @@ class GasBottleTracker {
         this.showMessage('Settings updated successfully!', 'success');
         this.updateDisplay();
         this.updateSettingsPreview();
-        this.hideSettingsPanel();
+        this.hideSettingsModal();
     }
 
     addConnection() {
