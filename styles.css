@@ -218,6 +218,8 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
+  max-width: 100%;
+  margin-bottom: 1.5rem;
 }
 
 .add-connection-card:hover {
@@ -785,40 +787,56 @@ body {
   opacity: 0.8;
 }
 
-/* Messages */
-.message {
-  padding: 1rem 1.5rem;
+/* Toast Notifications */
+.toast {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  z-index: 1000;
+  padding: 0.75rem 1.25rem;
   border-radius: var(--radius-md);
-  margin-bottom: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.875rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+  transform: translateX(100%);
+  transition: all 0.3s ease;
+  max-width: 300px;
 }
 
-.message.success {
-  background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
-  color: #22543d;
-  border: 1px solid #9ae6b4;
+.toast.show {
+  transform: translateX(0);
 }
 
-.message.error {
-  background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
-  color: #742a2a;
-  border: 1px solid #feb2b2;
+.toast.success {
+  background: rgba(72, 187, 120, 0.95);
+  color: white;
+  border: 1px solid rgba(72, 187, 120, 0.2);
 }
 
-.message.warning {
-  background: linear-gradient(135deg, #feebc8 0%, #f6ad55 100%);
-  color: #744210;
-  border: 1px solid #f6ad55;
+.toast.error {
+  background: rgba(245, 101, 101, 0.95);
+  color: white;
+  border: 1px solid rgba(245, 101, 101, 0.2);
 }
 
-.message.info {
-  background: linear-gradient(135deg, #bee3f8 0%, #90cdf4 100%);
-  color: #2c5282;
-  border: 1px solid #90cdf4;
+.toast.warning {
+  background: rgba(237, 137, 54, 0.95);
+  color: white;
+  border: 1px solid rgba(237, 137, 54, 0.2);
+}
+
+.toast.info {
+  background: rgba(66, 153, 225, 0.95);
+  color: white;
+  border: 1px solid rgba(66, 153, 225, 0.2);
+}
+
+.toast i {
+  font-size: 1rem;
 }
 
 /* Form Row */
@@ -907,6 +925,15 @@ body {
 }
 
 /* Responsive Design */
+@media (max-width: 640px) {
+  .toast {
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+    max-width: none;
+  }
+}
+
 @media (min-width: 640px) {
   .container {
     padding: 1.5rem;
@@ -961,6 +988,14 @@ body {
   .report-stats-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+  
+  .main-content {
+    gap: 1.5rem;
+  }
+  
+  .add-connection-card {
+    margin-bottom: 0;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -969,8 +1004,17 @@ body {
   }
   
   .main-content {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr 1fr;
     gap: 2rem;
+    align-items: start;
+  }
+  
+  .add-connection-card {
+    grid-column: 1;
+  }
+  
+  .settings-card {
+    grid-column: 2;
   }
   
   .stats-card,

@@ -630,22 +630,38 @@ class GasBottleTracker {
     }
 
     showMessage(message, type = 'success') {
-        // Remove existing messages
-        const existingMessages = document.querySelectorAll('.message');
-        existingMessages.forEach(msg => msg.remove());
+        // Remove existing toasts
+        const existingToasts = document.querySelectorAll('.toast');
+        existingToasts.forEach(toast => toast.remove());
 
-        // Create new message
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
-        messageDiv.textContent = message;
+        // Create new toast
+        const toastDiv = document.createElement('div');
+        toastDiv.className = `toast ${type}`;
+        
+        // Add icon based on type
+        const icon = type === 'success' ? 'fas fa-check-circle' : 
+                    type === 'error' ? 'fas fa-exclamation-circle' :
+                    type === 'warning' ? 'fas fa-exclamation-triangle' :
+                    'fas fa-info-circle';
+        
+        toastDiv.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
 
-        // Insert at the top of the main content
-        const mainContent = document.querySelector('.main-content');
-        mainContent.insertBefore(messageDiv, mainContent.firstChild);
+        // Add to body
+        document.body.appendChild(toastDiv);
+
+        // Trigger animation
+        setTimeout(() => {
+            toastDiv.classList.add('show');
+        }, 100);
 
         // Auto-remove after 3 seconds
         setTimeout(() => {
-            messageDiv.remove();
+            toastDiv.classList.remove('show');
+            setTimeout(() => {
+                if (toastDiv.parentNode) {
+                    toastDiv.remove();
+                }
+            }, 300);
         }, 3000);
     }
 
